@@ -78,3 +78,8 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **IP Token Bucket Rate Limiting**: Enforced rate limiting of 10 requests per hour per IP via Cloudflare KV key `rate:<clientIp>:<hourWindow>`, issuing HTTP 429 and toast `"the robots need a break"` on exhaustion.
 - **Fail-Safe Shrug Animation**: On Mammoth API timeout or key disruption, automatically delivers uniform `0.25` distribution with `fallback: true` and toast `"the robots forgot how to decide"`. All bots shrug at equal size with zero broken states.
 - **Full Accessibility Compliance**: Mirrored outcomes into `aria-live="polite"` region, provided sr-only form labels, real button elements with `aria-pressed`, and instant one-frame reveals under `prefers-reduced-motion: reduce`.
+
+## M12: Production Build, Secret Leak Audit & Deployment Preparation
+- **Bundle Optimization**: Built static bundle with Vite and TypeScript producing only 16.90 KB uncompressed (7.01 KB gzipped) client JavaScript, well below the 30 KB budget limit.
+- **Zero-Secret Bundle Verification**: Verified `dist/` directory with automated pattern scanning (`grep -r "GROQ_API_KEY\|BASETEN_API_KEY" frontend/dist/`), confirming `clean` output with 0 leaked tokens.
+- **Cloudflare Target Preparation**: Configured `wrangler.toml` for Cloudflare Workers API backend and Pages static hosting with KV namespace bindings.

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { validateGroqPayload, callGroqWithRetry } from "../src/groq";
 import { GROQ_SYSTEM_PROMPT } from "../src/prompt";
 
