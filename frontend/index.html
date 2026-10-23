@@ -15,6 +15,7 @@
         <span>mammoth bots</span>
       </div>
       <div class="top-actions">
+        <button id="sound-toggle" class="text-btn" type="button" title="Toggle audio feedback">sound: on</button>
         <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">forget</button>
         <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?]</button>
       </div>
@@ -23,6 +24,11 @@
     <div id="nerd-panel" class="nerd-panel" aria-hidden="true"></div>
 
     <main class="input-container" id="input-container">
+      <div class="dilemma-chips" id="dilemma-chips">
+        <button type="button" class="dilemma-pill" data-prompt="Should I adopt 3 cats?">Should I adopt 3 cats?</button>
+        <button type="button" class="dilemma-pill" data-prompt="Coffee or matcha?">Coffee or matcha?</button>
+        <button type="button" class="dilemma-pill" data-prompt="Is pizza a breakfast food?">Is pizza breakfast?</button>
+      </div>
       <form id="question-form" class="input-form">
         <label for="question-input" class="sr-only">Ask the robots a question</label>
         <input

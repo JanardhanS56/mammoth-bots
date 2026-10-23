@@ -103,6 +103,10 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
   - Interactive click ripple shockwaves pushing nearby bots with tactile physics.
   - Expressive animated eyes tracking the cursor smoothly with natural periodic blinks.
   - Direct bot poke reactions with playful hop physics.
-- **Minimalist Bauhaus / Swiss Styling**: High-contrast black outlines (`#18181B`), pill-shaped floating search input bar, and clean typography.
-
-
+## M15: Update 1.1 Tactile Physics, Scrum Huddle, Confetti & Synthesized Audio
+- **Robot Scrum Huddle Animation**: While Groq & Mammoth are processing in the `THINKING` state, all 4 bots smoothly converge into a central circular huddle, murmuring with animated speech bubbles (`?`, `…`, `!`, `~`) and subtle synthesized audio clicks.
+- **Celebratory Geometric Confetti**: Winner reveal triggers a 36-particle geometric confetti explosion (mini circles, triangles, diamonds, and squares) bursting upward and fluttering down the canvas with gravity and air resistance.
+- **Drag-and-Toss Agent Interactivity**: Any bot can be clicked, lifted, and dragged across the canvas, with realistic contact shadow diffusion and inertia-based toss release physics.
+- **Placard Verlet Spring Wobble**: Handheld boards now oscillate with angular spring damping (`targetAngle - placardAngle`), wobbling naturally as agents steer and stop.
+- **Synthesized Web Audio SFX**: Integrated zero-asset native `AudioContext` synthesizer generating gentle frequency sweeps for pokes, tosses, huddle murmurs, and chord chimes on reveal, with top-bar toggle `[sound: on/off]`.
+- **Preset Dilemma Pills**: Embedded 1-click test dilemma chips (`"Should I adopt 3 cats?"`, `"Coffee or matcha?"`, `"Is pizza breakfast?"`) above the search bar.

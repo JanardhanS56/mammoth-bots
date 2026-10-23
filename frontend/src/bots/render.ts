@@ -430,6 +430,94 @@ function drawBoard(
   ctx.restore();
 }
 
+export interface ConfettiParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  shape: string;
+  rot: number;
+  vrot: number;
+  alpha: number;
+  life: number;
+}
+
+export function drawConfetti(
+  ctx: CanvasRenderingContext2D,
+  particles: ConfettiParticle[]
+): void {
+  for (const p of particles) {
+    if (p.alpha <= 0.01) continue;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = hexA(p.color, p.alpha);
+    ctx.strokeStyle = `rgba(24, 24, 27, ${p.alpha * 0.7})`;
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    if (p.shape === "circle") {
+      ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+    } else if (p.shape === "triangle") {
+      ctx.moveTo(0, -p.size / 2);
+      ctx.lineTo(p.size / 2, p.size / 2);
+      ctx.lineTo(-p.size / 2, p.size / 2);
+      ctx.closePath();
+    } else {
+      ctx.rect(-p.size / 2, -p.size / 2, p.size, p.size);
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/**
+ * Draws thinking scrum speech murmurs above bots in the huddle.
+ */
+export function drawScrumBubble(
+  ctx: CanvasRenderingContext2D,
+  bot: Bot,
+  glyph: string,
+  now: number
+): void {
+  const pulse = Math.sin((now / 220) + bot.id * 1.5);
+  if (pulse < -0.2) return; // Staggered visibility
+
+  const scale = 0.8 + 0.25 * Math.max(0, pulse);
+  const bubbleX = bot.x;
+  const bubbleY = bot.y - bot.r - 28;
+
+  ctx.save();
+  ctx.translate(bubbleX, bubbleY);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 1.2;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 11, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Pointer dot towards bot
+  ctx.beginPath();
+  ctx.arc(0, 14, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#18181B";
+  ctx.font = "bold 12px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(glyph, 0, 1);
+
+  ctx.restore();
+}
+
 /**
  * Main drawBot function rendering the 4 distinct geometric shape bots
  * holding their option & probability boards.
@@ -446,12 +534,12 @@ export function drawBot(
   const blinkCycle = ((t + bot.id * 1400) % 3600);
   const isBlinking = blinkCycle < 140;
 
-  // Gentle walking bob
-  const bobAmp = reducedMotion ? 0 : 2.5 + 1.5 * bot.mood;
-  const bob = reducedMotion ? 0 : Math.sin((t / 2000) * 2 * Math.PI + bot.seed) * bobAmp;
+  // Gentle walking bob (suppressed when dragged)
+  const bobAmp = reducedMotion || bot.isDragged ? 0 : 2.5 + 1.5 * bot.mood;
+  const bob = reducedMotion || bot.isDragged ? 0 : Math.sin((t / 2000) * 2 * Math.PI + bot.seed) * bobAmp;
 
-  // Jump animation on click/hop
-  const hop = bot.hopOffset || 0;
+  // Jump animation on click/hop or lift on drag
+  const hop = (bot.hopOffset || 0) + (bot.isDragged ? -16 : 0);
 
   const moodScale = 1 + 0.05 * bot.mood;
   const totalScale = moodScale * bot.revealScale;
@@ -463,17 +551,19 @@ export function drawBot(
   const drawX = bot.x;
   const drawY = bot.y + bob + hop;
 
-  // Board tilt based on horizontal velocity
-  const tiltAngle = Math.max(-0.16, Math.min(0.16, (bot.vx / 90) * 0.14));
+  // Handheld placard angle with spring wobble inertia
+  const tiltAngle = bot.placardAngle ?? 0;
 
   ctx.save();
   ctx.translate(drawX, drawY);
 
-  // Contact shadow on the white canvas floor
-  const shadowR = bot.r * totalScale * 0.9;
-  ctx.fillStyle = "rgba(0, 0, 0, 0.07)";
+  // Contact shadow on the white canvas floor (expands & diffuses when lifted/dragged)
+  const shadowLift = bot.isDragged ? 1.4 : 1;
+  const shadowAlpha = bot.isDragged ? 0.04 : 0.07;
+  const shadowR = bot.r * totalScale * 0.9 * shadowLift;
+  ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
   ctx.beginPath();
-  ctx.ellipse(0, bot.r * totalScale + 44, shadowR, shadowR * 0.28, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, bot.r * totalScale + (bot.isDragged ? 60 : 44), shadowR, shadowR * 0.28, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.scale(scaleX, scaleY);
@@ -481,7 +571,7 @@ export function drawBot(
   // 1. Draw Geometric Shape (Circle, Triangle, Diamond, Squircle)
   drawShapeGeometry(ctx, bot.shape, bot.r, bot.color);
 
-  // 2. Eye Tracking
+  // 2. Eye Tracking (curious looking towards cursor or scrum center)
   let eyeOffsetX = 0;
   let eyeOffsetY = 0;
   if (!lookAtCamera && (cursor.x !== 0 || cursor.y !== 0)) {
