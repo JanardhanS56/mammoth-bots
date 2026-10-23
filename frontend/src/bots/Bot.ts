@@ -27,7 +27,11 @@ export interface Bot {
   streak: number;
   mood: number;
 
-  // Visual interactivity state
+  // Visual & physical interactivity state
+  placardAngle: number;
+  placardVel: number;
+  isDragged?: boolean;
+  scrumTarget?: { x: number; y: number };
   blinkTimer?: number;
   isBlinking?: boolean;
   hopOffset?: number;
@@ -73,6 +77,9 @@ export function createBot(id: 0 | 1 | 2 | 3, x: number, y: number): Bot {
 
     streak: 0,
     mood: 0,
+
+    placardAngle: 0,
+    placardVel: 0,
   };
 }
 

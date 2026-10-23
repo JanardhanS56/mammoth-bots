@@ -180,14 +180,56 @@ html, body {
   font-weight: bold;
 }
 
+/* Preset Dilemma Chips */
+.dilemma-chips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dilemma-chips.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+}
+
+.dilemma-pill {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.dilemma-pill:hover {
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.dilemma-pill:active {
+  transform: translateY(1px);
+}
+
 /* Minimalist Floating Input Container */
 .input-container {
   position: fixed;
-  bottom: 28px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 48px);
-  max-width: 540px;
+  max-width: 580px;
   z-index: 20;
 }
 

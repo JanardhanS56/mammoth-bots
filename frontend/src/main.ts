@@ -6,7 +6,10 @@ import {
   drawSpeech,
   drawNerdTag,
   drawRoamingTrail,
+  drawConfetti,
+  drawScrumBubble,
   BotTrailPoint,
+  ConfettiParticle,
 } from "./bots/render";
 import { updateSteering, Rect } from "./bots/steering";
 import { createRenderLoop } from "./bots/loop";
@@ -15,6 +18,7 @@ import { decide, DecideResponse } from "./api";
 import { showToast } from "./ui/toast";
 import { easeOutCubic, lerp } from "./lib/ease";
 import { setupNerdMode, NerdController } from "./ui/nerd";
+import { sound } from "./lib/sound";
 import {
   loadBotStats,
   decayStreaks,
@@ -42,6 +46,7 @@ interface CursorTrailPoint {
 const canvas = document.getElementById("bots-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const inputContainer = document.getElementById("input-container") as HTMLElement;
+const dilemmaChips = document.getElementById("dilemma-chips") as HTMLElement | null;
 const questionForm = document.getElementById("question-form") as HTMLFormElement;
 const questionInput = document.getElementById("question-input") as HTMLInputElement;
 const charCounter = document.getElementById("char-counter") as HTMLElement;
@@ -50,6 +55,7 @@ const a11yResult = document.getElementById("a11y-result") as HTMLElement;
 const nerdToggle = document.getElementById("nerd-toggle") as HTMLButtonElement | null;
 const nerdPanel = document.getElementById("nerd-panel") as HTMLElement | null;
 const amnesiaBtn = document.getElementById("amnesia-btn") as HTMLButtonElement | null;
+const soundToggle = document.getElementById("sound-toggle") as HTMLButtonElement | null;
 
 let appState: AppState = "IDLE";
 let currentResult: DecideResponse | null = null;
@@ -66,7 +72,12 @@ let botStats: BotStatsRecord = decayStreaks(loadBotStats());
 const cursor = { x: 0, y: 0 };
 const cursorTrail: CursorTrailPoint[] = [];
 const ripples: ClickRipple[] = [];
+const confetti: ConfettiParticle[] = [];
 const botTrails = new Map<number, BotTrailPoint[]>();
+
+// Drag-and-toss state
+let draggedBot: Bot | null = null;
+const dragSamples: Array<{ x: number; y: number; t: number }> = [];
 
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 let reducedMotion = reducedMotionQuery.matches;
@@ -75,10 +86,42 @@ reducedMotionQuery.addEventListener("change", (e) => {
   reducedMotion = e.matches;
 });
 
+// Sound toggle setup
+if (soundToggle) {
+  soundToggle.textContent = sound.isEnabled() ? "sound: on" : "sound: off";
+  soundToggle.addEventListener("click", () => {
+    const isNowOn = sound.toggle();
+    soundToggle.textContent = isNowOn ? "sound: on" : "sound: off";
+  });
+}
+
+// Dilemma chip quick prompt selection
+if (dilemmaChips && questionInput) {
+  dilemmaChips.querySelectorAll(".dilemma-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      if (appState !== "IDLE") return;
+      const prompt = (pill as HTMLElement).dataset.prompt;
+      if (prompt) {
+        questionInput.value = prompt;
+        inputController?.setValue(prompt);
+        onUserSubmit(prompt);
+      }
+    });
+  });
+}
+
 window.addEventListener("pointermove", (e) => {
   cursor.x = e.clientX;
   cursor.y = e.clientY;
-  cursorTrail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+  const now = performance.now();
+  cursorTrail.push({ x: e.clientX, y: e.clientY, t: now });
+
+  if (draggedBot) {
+    draggedBot.x = e.clientX;
+    draggedBot.y = e.clientY;
+    dragSamples.push({ x: e.clientX, y: e.clientY, t: now });
+    if (dragSamples.length > 8) dragSamples.shift();
+  }
 });
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -87,20 +130,24 @@ canvas.addEventListener("pointerdown", (e) => {
   const clickY = e.clientY - rect.top;
   const now = performance.now();
 
-  // 1. Add interactive ripple
-  ripples.push({ x: clickX, y: clickY, startTime: now, duration: 600 });
-
-  // 2. Check if user tapped directly on a bot to poke it
+  // 1. Check if user clicked directly on a bot to drag / poke it
   for (const b of bots) {
     const dist = Math.hypot(b.x - clickX, b.y - clickY);
-    if (dist <= b.r * 2.2) {
-      b.hopOffset = -22;
-      b.vx += (Math.random() - 0.5) * 40;
-      b.vy += -30;
-      showToast(`*poke*`, 800);
+    if (dist <= b.r * 2.3) {
+      draggedBot = b;
+      b.isDragged = true;
+      dragSamples.length = 0;
+      dragSamples.push({ x: clickX, y: clickY, t: now });
+      b.hopOffset = -18;
+      sound.playPoke();
+      canvas.setPointerCapture?.(e.pointerId);
       return;
     }
   }
+
+  // 2. Add interactive ripple
+  ripples.push({ x: clickX, y: clickY, startTime: now, duration: 600 });
+  sound.playPoke();
 
   // 3. Shockwave impulse on nearby bots
   for (const b of bots) {
@@ -116,6 +163,34 @@ canvas.addEventListener("pointerdown", (e) => {
   }
 });
 
+window.addEventListener("pointerup", (e) => {
+  if (draggedBot) {
+    let vx = 0;
+    let vy = 0;
+    if (dragSamples.length >= 2) {
+      const first = dragSamples[0];
+      const last = dragSamples[dragSamples.length - 1];
+      const dt = (last.t - first.t) / 1000;
+      if (dt > 0.01 && dt < 0.25) {
+        vx = (last.x - first.x) / dt;
+        vy = (last.y - first.y) / dt;
+      }
+    }
+
+    draggedBot.vx = Math.max(-320, Math.min(320, vx * 0.45));
+    draggedBot.vy = Math.max(-320, Math.min(320, vy * 0.45));
+    draggedBot.isDragged = false;
+    draggedBot.hopOffset = -10;
+    sound.playToss();
+    draggedBot = null;
+    try {
+      canvas.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // ignore
+    }
+  }
+});
+
 let bots: Bot[] = createAllBots(window.innerWidth, window.innerHeight);
 applyStatsToBots(bots, botStats);
 
@@ -125,6 +200,7 @@ for (const b of bots) {
 
 let inputBarRect: Rect | null = null;
 let lastWinnerPos: { x: number; y: number } | null = null;
+let murmurInterval = 0;
 
 export const nerdController: NerdController = setupNerdMode(nerdToggle, nerdPanel, (active) => {
   isNerdActive = active;
@@ -158,6 +234,33 @@ export function drawGrid(context: CanvasRenderingContext2D, w: number, h: number
       context.arc(x, y, 1, 0, Math.PI * 2);
       context.fill();
     }
+  }
+}
+
+/**
+ * Spawns celebratory geometric confetti particles on winner reveal.
+ */
+function spawnConfetti(originX: number, originY: number): void {
+  if (reducedMotion) return;
+  const colors = ["#2563EB", "#16A34A", "#DC2626", "#EAB308"];
+  const shapes = ["circle", "triangle", "diamond", "square"];
+
+  for (let i = 0; i < 36; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 70 + Math.random() * 190;
+    confetti.push({
+      x: originX,
+      y: originY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 90,
+      size: 5 + Math.random() * 6,
+      color: colors[i % colors.length],
+      shape: shapes[i % shapes.length],
+      rot: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 8,
+      alpha: 1,
+      life: 2.4,
+    });
   }
 }
 
@@ -211,15 +314,72 @@ function drawInteractions(context: CanvasRenderingContext2D, now: number): void 
   }
 }
 
-function handleStateUpdate(now: number, dt: number): void {
-  // Update hop spring physics
+function handleStateUpdate(now: number, dt: number, width: number, height: number): void {
+  const dtSec = Math.min(0.032, dt / 1000);
+
+  // 1. Update hop spring physics & placard wobble dynamics
   for (const b of bots) {
     if (b.hopOffset && b.hopOffset !== 0) {
-      b.hopOffset += (0 - b.hopOffset) * Math.min(1, dt * 10);
+      b.hopOffset += (0 - b.hopOffset) * Math.min(1, dtSec * 10);
       if (Math.abs(b.hopOffset) < 0.2) b.hopOffset = 0;
+    }
+
+    // Placard inertial spring wobble
+    const targetAngle = Math.max(-0.22, Math.min(0.22, (b.vx / 90) * 0.16));
+    const springForce = (targetAngle - b.placardAngle) * 36 - b.placardVel * 6.5;
+    b.placardVel += springForce * dtSec;
+    b.placardAngle += b.placardVel * dtSec;
+  }
+
+  // 2. Update confetti physics
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const p = confetti[i];
+    p.life -= dtSec;
+    if (p.life <= 0) {
+      confetti.splice(i, 1);
+      continue;
+    }
+    p.x += p.vx * dtSec;
+    p.y += p.vy * dtSec;
+    p.vy += 220 * dtSec; // gravity
+    p.vx *= 0.98; // air resistance
+    p.rot += p.vrot * dtSec;
+    p.alpha = Math.max(0, p.life / 2.4);
+  }
+
+  // 3. Robot Scrum / Huddle when THINKING
+  if (appState === "THINKING") {
+    const cx = width / 2;
+    const cy = height * 0.42;
+    const scrumR = 58;
+
+    for (let i = 0; i < bots.length; i++) {
+      const b = bots[i];
+      if (b.isDragged) continue;
+      const angle = (i * Math.PI) / 2 + Math.PI / 4 + now / 3500;
+      const tx = cx + Math.cos(angle) * scrumR;
+      const ty = cy + Math.sin(angle) * scrumR;
+
+      b.vx += (tx - b.x) * 4 * dtSec * 60;
+      b.vy += (ty - b.y) * 4 * dtSec * 60;
+      b.vx *= 0.88;
+      b.vy *= 0.88;
+      b.x += b.vx * dtSec;
+      b.y += b.vy * dtSec;
+
+      // Safe clamp inside canvas
+      b.x = Math.max(b.r + 10, Math.min(width - b.r - 10, b.x));
+      b.y = Math.max(b.r + 10, Math.min(height - b.r - 10, b.y));
+    }
+
+    // Murmur sound pulses
+    if (now - murmurInterval > 550) {
+      murmurInterval = now;
+      sound.playMurmur();
     }
   }
 
+  // 4. Reveal & Settled State Transitions
   if (appState === "REVEALING") {
     const elapsed = now - revealStartTime;
     const progress = reducedMotion ? 1 : Math.min(1, elapsed / 600);
@@ -277,6 +437,7 @@ function handleStateUpdate(now: number, dt: number): void {
     if (elapsed >= 1400) {
       appState = "IDLE";
       inputController?.setDisabled(false);
+      dilemmaChips?.classList.remove("hidden");
     }
   }
 }
@@ -294,22 +455,25 @@ export const renderLoop = createRenderLoop(canvas, {
     }
   },
   onUpdate: (dt, now) => {
-    handleStateUpdate(now, dt);
-
     const dims = renderLoop.getDimensions();
-    updateSteering(bots, {
-      dt,
-      width: dims.width,
-      height: dims.height,
-      inputBarRect,
-      cursor,
-      lastWinnerPos,
-      freezeWander: appState === "REVEALING" || appState === "SETTLED",
-      reducedMotion,
-    });
+    handleStateUpdate(now, dt, dims.width, dims.height);
+
+    if (appState !== "THINKING") {
+      updateSteering(bots, {
+        dt,
+        width: dims.width,
+        height: dims.height,
+        inputBarRect,
+        cursor,
+        lastWinnerPos,
+        freezeWander: appState === "REVEALING" || appState === "SETTLED",
+        reducedMotion,
+      });
+    }
 
     // Record wandering path coordinates
     for (const b of bots) {
+      if (b.isDragged) continue;
       const trail = botTrails.get(b.id);
       if (trail) {
         const last = trail[trail.length - 1];
@@ -336,26 +500,37 @@ export const renderLoop = createRenderLoop(canvas, {
     // 2. Draw interactive cursor trails and ripples
     drawInteractions(ctx, now);
 
+    // 3. Draw celebratory confetti particles
+    if (confetti.length > 0) {
+      drawConfetti(ctx, confetti);
+    }
+
     const elapsed = (appState === "REVEALING" || appState === "SETTLED") ? now - revealStartTime : 0;
     const isCoinFlip = currentResult?.coinFlip ?? false;
 
-    // 3. Draw bots (Shape + Expressive Eyes + Handheld Board)
+    // 4. Draw bots (Shape + Expressive Eyes + Handheld Board)
     for (let i = 0; i < bots.length; i++) {
       const b = bots[i];
       const isTopCoinPair = isCoinFlip && coinFlipTopPair && (i === coinFlipTopPair[0] || i === coinFlipTopPair[1]);
       const lookAtCamera = Boolean(isTopCoinPair && elapsed >= 550);
 
       drawBot(ctx, b, now, cursor, reducedMotion, lookAtCamera);
+
+      // Thinking Scrum murmurs
+      if (appState === "THINKING") {
+        const glyphs = ["?", "…", "!", "~"];
+        drawScrumBubble(ctx, b, glyphs[i], now);
+      }
     }
 
-    // 4. Draw nerd tags (AFTER drawBot)
+    // 5. Draw nerd tags (AFTER drawBot)
     if (isNerdActive) {
       for (let i = 0; i < bots.length; i++) {
         drawNerdTag(ctx, bots[i], dims.width);
       }
     }
 
-    // 5. Draw crowns & speech bubbles
+    // 6. Draw crowns & speech bubbles
     if (appState === "REVEALING" || appState === "SETTLED") {
       for (let i = 0; i < bots.length; i++) {
         const b = bots[i];
@@ -372,12 +547,14 @@ export async function onUserSubmit(question: string): Promise<void> {
   appState = "THINKING";
   roundRecorded = false;
   inputController?.setDisabled(true);
+  dilemmaChips?.classList.add("hidden");
   showToast("conferring…", 2000);
 
   const res = await decide(question);
   if (!res.ok) {
     appState = "IDLE";
     inputController?.setDisabled(false);
+    dilemmaChips?.classList.remove("hidden");
     if (res.error.code === "BAD_INPUT") {
       inputController?.shake();
       inputController?.showHint("that's a lot of words");
@@ -392,6 +569,7 @@ export async function onUserSubmit(question: string): Promise<void> {
   currentResult = res.data;
   revealStartTime = performance.now();
   appState = "REVEALING";
+  sound.playChime();
 
   if (res.data.fallback) {
     showToast("the robots forgot how to decide", 3000);
@@ -402,6 +580,11 @@ export async function onUserSubmit(question: string): Promise<void> {
     .sort((a, b) => b.p - a.p)
     .map((item) => item.idx);
   coinFlipTopPair = [sortedIndices[0], sortedIndices[1]];
+
+  const winner = bots[res.data.chosenId];
+  if (winner) {
+    spawnConfetti(winner.x, winner.y);
+  }
 
   for (let i = 0; i < bots.length; i++) {
     const b = bots[i];
@@ -415,6 +598,16 @@ export async function onUserSubmit(question: string): Promise<void> {
     b.targetP = opt.p;
     b.targetScale = 0.6 + opt.p;
     b.chosen = res.data.chosenId === b.id;
+
+    // Scatter impulse away from scrum center
+    const dims = renderLoop.getDimensions();
+    const cx = dims.width / 2;
+    const cy = dims.height * 0.42;
+    const dx = b.x - cx;
+    const dy = b.y - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    b.vx = (dx / dist) * 75;
+    b.vy = (dy / dist) * 75;
   }
 
   nerdController.updatePanel({
@@ -438,6 +631,7 @@ amnesiaBtn?.addEventListener("click", () => {
   botStats = resetBotStats();
   applyStatsToBots(bots, botStats);
   lastWinnerPos = null;
+  sound.playPoke();
   showToast("memories cleared", 1500);
 });
 
