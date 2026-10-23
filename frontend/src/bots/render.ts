@@ -6,6 +6,12 @@ export interface CursorState {
   y: number;
 }
 
+export interface BotTrailPoint {
+  x: number;
+  y: number;
+  t: number;
+}
+
 export function drawCrown(
   ctx: CanvasRenderingContext2D,
   bot: Bot,
@@ -23,36 +29,39 @@ export function drawCrown(
     scale = 1.15 - ((progress - 0.7) / 0.3) * 0.15;
   }
 
-  const crownY = bot.y - bot.r * bot.revealScale - 26;
+  const crownY = bot.y - bot.r * bot.revealScale - 28;
 
   ctx.save();
   ctx.translate(bot.x, crownY);
   ctx.scale(scale, scale);
 
-  ctx.fillStyle = "#FBBF24";
-  ctx.strokeStyle = "#D97706";
+  ctx.fillStyle = "#F59E0B";
+  ctx.strokeStyle = "#18181B";
   ctx.lineWidth = 1.5;
 
-  // 3-point crown
+  // 3-point minimalist geometric crown
   ctx.beginPath();
-  ctx.moveTo(-12, 4);
-  ctx.lineTo(-14, -8);
+  ctx.moveTo(-13, 5);
+  ctx.lineTo(-15, -9);
   ctx.lineTo(-5, -2);
-  ctx.lineTo(0, -12);
+  ctx.lineTo(0, -13);
   ctx.lineTo(5, -2);
-  ctx.lineTo(14, -8);
-  ctx.lineTo(12, 4);
+  ctx.lineTo(15, -9);
+  ctx.lineTo(13, 5);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
-  // Jewels at points
-  ctx.fillStyle = "#FFF";
+  // Geometric crown jewels
+  ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
-  ctx.arc(-14, -8, 1.5, 0, Math.PI * 2);
-  ctx.arc(0, -12, 1.5, 0, Math.PI * 2);
-  ctx.arc(14, -8, 1.5, 0, Math.PI * 2);
+  ctx.arc(-15, -9, 1.8, 0, Math.PI * 2);
+  ctx.arc(0, -13, 2, 0, Math.PI * 2);
+  ctx.arc(15, -9, 1.8, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -78,40 +87,49 @@ export function drawSpeech(
   if (!text) return;
 
   ctx.save();
-  ctx.font = bot.chosen ? "bold 13px ui-sans-serif, system-ui, sans-serif" : "12px ui-sans-serif, system-ui, sans-serif";
+  ctx.font = bot.chosen
+    ? "bold 12px ui-sans-serif, system-ui, sans-serif"
+    : "11px ui-sans-serif, system-ui, sans-serif";
   const textMetrics = ctx.measureText(text);
   const paddingX = 10;
-  const paddingY = 6;
-  void paddingY;
-  const bubbleWidth = textMetrics.width + paddingX * 2;
-  const bubbleHeight = 24;
+  const bubbleWidth = Math.max(34, textMetrics.width + paddingX * 2);
+  const bubbleHeight = 22;
 
   const bubbleX = bot.x;
-  const bubbleY = bot.y - bot.r * bot.revealScale - (bot.chosen ? 46 : 38);
+  const bubbleY = bot.y - bot.r * bot.revealScale - (bot.chosen ? 50 : 38);
 
   ctx.translate(bubbleX, bubbleY);
   ctx.scale(bubbleProgress, bubbleProgress);
 
-  // Bubble background
-  ctx.fillStyle = "rgba(20, 24, 29, 0.92)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-  ctx.lineWidth = 1;
+  // Minimalist white speech bubble with crisp black stroke
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 1.5;
 
   ctx.beginPath();
   ctx.roundRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 6);
   ctx.fill();
   ctx.stroke();
 
-  // Tail
+  // Speech bubble pointer tail
   ctx.beginPath();
   ctx.moveTo(-4, bubbleHeight / 2);
   ctx.lineTo(0, bubbleHeight / 2 + 5);
   ctx.lineTo(4, bubbleHeight / 2);
-  ctx.fillStyle = "rgba(20, 24, 29, 0.92)";
+  ctx.fillStyle = "#FFFFFF";
   ctx.fill();
+  ctx.stroke();
 
-  // Text
-  ctx.fillStyle = "#E8ECF1";
+  // Fill in tail seam
+  ctx.beginPath();
+  ctx.moveTo(-3, bubbleHeight / 2 - 0.5);
+  ctx.lineTo(3, bubbleHeight / 2 - 0.5);
+  ctx.strokeStyle = "#FFFFFF";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Speech text
+  ctx.fillStyle = "#18181B";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, 0, 1);
@@ -127,7 +145,7 @@ export function drawNerdTag(
   const moodScale = 1 + 0.06 * bot.mood;
   const totalScale = moodScale * bot.revealScale;
 
-  // 26px above bot top boundary, clamped to >= 40px from top
+  // Clamped >= 40px from top
   const botTopY = bot.y - bot.r * totalScale;
   const tagY = Math.max(40, botTopY - 26);
 
@@ -138,11 +156,9 @@ export function drawNerdTag(
   const showLabel = viewportWidth >= 480;
   const percentText = `${Math.round(bot.pDisplay * 100)}%`;
 
-  // Draw label line if screen >= 480px
-  if (showLabel) {
-    const labelText = bot.label || bot.slot;
-    ctx.fillStyle = "#E8ECF1";
-    ctx.fillText(labelText, bot.x, tagY - 10);
+  if (showLabel && bot.label) {
+    ctx.fillStyle = "#18181B";
+    ctx.fillText(bot.label, bot.x, tagY - 10);
   }
 
   // Draw 96x6px probability bar
@@ -152,27 +168,272 @@ export function drawNerdTag(
   const barY = tagY;
 
   // Background track
-  ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.fillStyle = "#E4E4E7";
   ctx.beginPath();
   ctx.roundRect(barX, barY, barW, barH, 3);
   ctx.fill();
 
-  // Filled bar: winner full color, others 50% alpha
+  // Filled bar: winner full color, others 60% alpha
   const fillW = Math.max(0, Math.min(barW, Math.round(bot.pDisplay * barW)));
-  ctx.fillStyle = bot.chosen ? bot.color : hexA(bot.color, 0.5);
+  ctx.fillStyle = bot.chosen ? bot.color : hexA(bot.color, 0.6);
   if (fillW > 0) {
     ctx.beginPath();
     ctx.roundRect(barX, barY, fillW, barH, 3);
     ctx.fill();
   }
 
-  // Percent text below bar
-  ctx.fillStyle = "#6B7685";
+  ctx.fillStyle = "#71717A";
   ctx.fillText(percentText, bot.x, barY + barH + 11);
 
   ctx.restore();
 }
 
+/**
+ * Draws the faint, roaming path trail left by an agent across the white canvas.
+ */
+export function drawRoamingTrail(
+  ctx: CanvasRenderingContext2D,
+  points: BotTrailPoint[],
+  color: string,
+  now: number
+): void {
+  if (points.length < 2) return;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  for (let i = 1; i < points.length; i++) {
+    const p1 = points[i - 1];
+    const p2 = points[i];
+    const age = now - p2.t;
+    const maxAge = 4000;
+    if (age > maxAge) continue;
+
+    const alpha = (1 - age / maxAge) * 0.22;
+    ctx.strokeStyle = hexA(color, alpha);
+    ctx.lineWidth = 2.5 * (1 - age / maxAge);
+    ctx.setLineDash([4, 6]);
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draws the shape body:
+ * 0: Circle (Blue)
+ * 1: Triangle (Green)
+ * 2: Diamond (Red)
+ * 3: Round edged square (Squircle) (Yellow)
+ */
+function drawShapeGeometry(
+  ctx: CanvasRenderingContext2D,
+  shape: string,
+  r: number,
+  color: string
+): void {
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  if (shape === "triangle") {
+    // Equilateral triangle with rounded vertex feel
+    const h = r * 1.35;
+    const w = r * 1.25;
+    ctx.moveTo(0, -h);
+    ctx.lineTo(w, h * 0.75);
+    ctx.lineTo(-w, h * 0.75);
+    ctx.closePath();
+  } else if (shape === "diamond") {
+    // Diamond / Rhombus shape
+    const dw = r * 1.15;
+    const dh = r * 1.3;
+    ctx.moveTo(0, -dh);
+    ctx.lineTo(dw, 0);
+    ctx.lineTo(0, dh);
+    ctx.lineTo(-dw, 0);
+    ctx.closePath();
+  } else if (shape === "squircle") {
+    // Round edged square
+    const size = r * 2.1;
+    ctx.roundRect(-size / 2, -size / 2, size, size, 12);
+  } else {
+    // Default circle (Blue)
+    ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2);
+  }
+
+  ctx.fill();
+  ctx.stroke();
+}
+
+/**
+ * Draws expressive, interactive eyes that track the cursor and blink naturally.
+ */
+function drawEyes(
+  ctx: CanvasRenderingContext2D,
+  eyeOffset: { x: number; y: number },
+  isBlinking: boolean,
+  mood: number
+): void {
+  const eyeSpacing = 8;
+  const eyeBaseY = -3;
+  const eyeR = 4.5;
+  const pupilR = 2.2;
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 1.2;
+
+  if (isBlinking) {
+    // Cute curved blink lines
+    ctx.beginPath();
+    ctx.arc(-eyeSpacing, eyeBaseY + 1, 4, Math.PI * 0.8, Math.PI * 0.2, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(eyeSpacing, eyeBaseY + 1, 4, Math.PI * 0.8, Math.PI * 0.2, true);
+    ctx.stroke();
+    return;
+  }
+
+  // Left Eye white
+  ctx.beginPath();
+  ctx.arc(-eyeSpacing, eyeBaseY, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Right Eye white
+  ctx.beginPath();
+  ctx.arc(eyeSpacing, eyeBaseY, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Pupils
+  ctx.fillStyle = "#09090B";
+
+  ctx.beginPath();
+  ctx.arc(
+    -eyeSpacing + eyeOffset.x,
+    eyeBaseY + eyeOffset.y,
+    pupilR,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(
+    eyeSpacing + eyeOffset.x,
+    eyeBaseY + eyeOffset.y,
+    pupilR,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  // Tiny glint specular highlight
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.arc(-eyeSpacing + eyeOffset.x - 0.8, eyeBaseY + eyeOffset.y - 0.8, 0.8, 0, Math.PI * 2);
+  ctx.arc(eyeSpacing + eyeOffset.x - 0.8, eyeBaseY + eyeOffset.y - 0.8, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Happy eyebrow curve if winning mood
+  if (mood > 0.3) {
+    ctx.strokeStyle = "#18181B";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(-eyeSpacing, eyeBaseY - 4, 3, Math.PI, 0, false);
+    ctx.arc(eyeSpacing, eyeBaseY - 4, 3, Math.PI, 0, false);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Draws the physical handheld sign/board showing option and probability.
+ */
+function drawBoard(
+  ctx: CanvasRenderingContext2D,
+  bot: Bot,
+  tiltAngle: number
+): void {
+  const boardW = 108;
+  const boardH = 46;
+  const boardY = bot.r + 26;
+
+  ctx.save();
+  ctx.translate(0, boardY);
+  ctx.rotate(tiltAngle);
+
+  // Placard stem / post connecting bot to board
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -boardH / 2 - 8);
+  ctx.lineTo(0, -boardH / 2);
+  ctx.stroke();
+
+  // Soft tactile drop shadow under the board
+  ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+  ctx.beginPath();
+  ctx.roundRect(-boardW / 2 + 2, -boardH / 2 + 4, boardW, boardH, 8);
+  ctx.fill();
+
+  // White board body
+  ctx.fillStyle = "#FFFFFF";
+  ctx.strokeStyle = bot.chosen ? bot.color : "#18181B";
+  ctx.lineWidth = bot.chosen ? 2.5 : 1.5;
+
+  ctx.beginPath();
+  ctx.roundRect(-boardW / 2, -boardH / 2, boardW, boardH, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Two cute little hands/grippers gripping the top sides of the board
+  ctx.fillStyle = bot.color;
+  ctx.strokeStyle = "#18181B";
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.arc(-boardW / 2 + 14, -boardH / 2, 4.5, 0, Math.PI * 2);
+  ctx.arc(boardW / 2 - 14, -boardH / 2, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 1. Probability Display
+  const pct = Math.round(bot.pDisplay * 100);
+  const percentText = bot.p !== null ? `${pct}%` : "—%";
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillStyle = bot.chosen ? bot.color : "#09090B";
+  ctx.font = "bold 16px ui-monospace, 'SFMono-Regular', Menlo, Monaco, monospace";
+  ctx.fillText(percentText, 0, -8);
+
+  // 2. Option Label Display
+  let optionText = bot.label || "ready";
+  if (optionText.length > 17) {
+    optionText = optionText.substring(0, 15) + "…";
+  }
+
+  ctx.fillStyle = bot.label ? "#27272A" : "#A1A1AA";
+  ctx.font = "500 10.5px ui-sans-serif, system-ui, -apple-system, sans-serif";
+  ctx.fillText(optionText, 0, 11);
+
+  ctx.restore();
+}
+
+/**
+ * Main drawBot function rendering the 4 distinct geometric shape bots
+ * holding their option & probability boards.
+ */
 export function drawBot(
   ctx: CanvasRenderingContext2D,
   bot: Bot,
@@ -181,64 +442,46 @@ export function drawBot(
   reducedMotion: boolean = false,
   lookAtCamera: boolean = false
 ): void {
-  const bobAmp = reducedMotion ? 0 : 3 + 2 * bot.mood;
-  const bob = reducedMotion ? 0 : Math.sin((t / 2400) * 2 * Math.PI + bot.seed) * bobAmp;
+  // Natural periodic eye blink cycle
+  const blinkCycle = ((t + bot.id * 1400) % 3600);
+  const isBlinking = blinkCycle < 140;
 
-  const moodScale = 1 + 0.06 * bot.mood;
+  // Gentle walking bob
+  const bobAmp = reducedMotion ? 0 : 2.5 + 1.5 * bot.mood;
+  const bob = reducedMotion ? 0 : Math.sin((t / 2000) * 2 * Math.PI + bot.seed) * bobAmp;
+
+  // Jump animation on click/hop
+  const hop = bot.hopOffset || 0;
+
+  const moodScale = 1 + 0.05 * bot.mood;
   const totalScale = moodScale * bot.revealScale;
 
   const sadFactor = Math.max(0, -bot.mood);
-  const scaleX = totalScale * (1 + 0.05 * sadFactor);
-  const scaleY = totalScale * (1 - 0.08 * sadFactor);
+  const scaleX = totalScale * (1 + 0.04 * sadFactor);
+  const scaleY = totalScale * (1 - 0.06 * sadFactor);
 
   const drawX = bot.x;
-  const drawY = bot.y + bob;
+  const drawY = bot.y + bob + hop;
+
+  // Board tilt based on horizontal velocity
+  const tiltAngle = Math.max(-0.16, Math.min(0.16, (bot.vx / 90) * 0.14));
 
   ctx.save();
   ctx.translate(drawX, drawY);
+
+  // Contact shadow on the white canvas floor
+  const shadowR = bot.r * totalScale * 0.9;
+  ctx.fillStyle = "rgba(0, 0, 0, 0.07)";
+  ctx.beginPath();
+  ctx.ellipse(0, bot.r * totalScale + 44, shadowR, shadowR * 0.28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.scale(scaleX, scaleY);
 
-  // 1. Radial Halo
-  const haloR = bot.r * 1.7;
-  const haloAlpha = Math.max(0.18, Math.min(0.48, 0.33 + 0.15 * bot.mood));
-  const grad = ctx.createRadialGradient(0, 0, bot.r * 0.8, 0, 0, haloR);
-  grad.addColorStop(0, hexA(bot.color, haloAlpha));
-  grad.addColorStop(1, hexA(bot.color, 0));
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, haloR, 0, Math.PI * 2);
-  ctx.fill();
+  // 1. Draw Geometric Shape (Circle, Triangle, Diamond, Squircle)
+  drawShapeGeometry(ctx, bot.shape, bot.r, bot.color);
 
-  // 2. Antenna
-  const antennaAngle = -0.55 * bot.mood;
-  const antennaLen = 14;
-  const antennaStartX = 0;
-  const antennaStartY = -bot.r;
-  const antennaEndX = antennaStartX + Math.sin(antennaAngle) * antennaLen;
-  const antennaEndY = antennaStartY - Math.cos(antennaAngle) * antennaLen;
-
-  ctx.strokeStyle = bot.color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(antennaStartX, antennaStartY);
-  ctx.lineTo(antennaEndX, antennaEndY);
-  ctx.stroke();
-
-  ctx.fillStyle = bot.color;
-  ctx.beginPath();
-  ctx.arc(antennaEndX, antennaEndY, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 3. Rounded-rect body
-  const w = bot.r * 2;
-  const h = bot.r * 2;
-  const radius = 8;
-  ctx.fillStyle = bot.color;
-  ctx.beginPath();
-  ctx.roundRect(-bot.r, -bot.r, w, h, radius);
-  ctx.fill();
-
-  // 4. Eyes
+  // 2. Eye Tracking
   let eyeOffsetX = 0;
   let eyeOffsetY = 0;
   if (!lookAtCamera && (cursor.x !== 0 || cursor.y !== 0)) {
@@ -246,22 +489,15 @@ export function drawBot(
     const dy = cursor.y - drawY;
     const dist = Math.hypot(dx, dy);
     if (dist > 0.1) {
-      eyeOffsetX = Math.max(-4, Math.min(4, (dx / dist) * 4));
-      eyeOffsetY = Math.max(-4, Math.min(4, (dy / dist) * 4));
+      eyeOffsetX = Math.max(-2.5, Math.min(2.5, (dx / dist) * 2.5));
+      eyeOffsetY = Math.max(-2.2, Math.min(2.2, (dy / dist) * 2.2));
     }
   }
 
-  ctx.fillStyle = "#0B0D10";
-  const eyeR = 2.5;
-  const eyeBaseY = -2;
+  drawEyes(ctx, { x: eyeOffsetX, y: eyeOffsetY }, isBlinking, bot.mood);
 
-  ctx.beginPath();
-  ctx.arc(-7 + eyeOffsetX, eyeBaseY + eyeOffsetY, eyeR, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(7 + eyeOffsetX, eyeBaseY + eyeOffsetY, eyeR, 0, Math.PI * 2);
-  ctx.fill();
+  // 3. Handheld Option & Probability Board
+  drawBoard(ctx, bot, tiltAngle);
 
   ctx.restore();
 }

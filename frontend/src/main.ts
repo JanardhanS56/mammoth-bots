@@ -1,6 +1,13 @@
 import "./styles.css";
 import { createAllBots, Bot } from "./bots/Bot";
-import { drawBot, drawCrown, drawSpeech, drawNerdTag } from "./bots/render";
+import {
+  drawBot,
+  drawCrown,
+  drawSpeech,
+  drawNerdTag,
+  drawRoamingTrail,
+  BotTrailPoint,
+} from "./bots/render";
 import { updateSteering, Rect } from "./bots/steering";
 import { createRenderLoop } from "./bots/loop";
 import { setupInputBar, InputBarController } from "./ui/input";
@@ -18,6 +25,19 @@ import {
 } from "./bots/moods";
 
 export type AppState = "IDLE" | "THINKING" | "REVEALING" | "SETTLED";
+
+interface ClickRipple {
+  x: number;
+  y: number;
+  startTime: number;
+  duration: number;
+}
+
+interface CursorTrailPoint {
+  x: number;
+  y: number;
+  t: number;
+}
 
 const canvas = document.getElementById("bots-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -44,6 +64,10 @@ let roundRecorded = false;
 let botStats: BotStatsRecord = decayStreaks(loadBotStats());
 
 const cursor = { x: 0, y: 0 };
+const cursorTrail: CursorTrailPoint[] = [];
+const ripples: ClickRipple[] = [];
+const botTrails = new Map<number, BotTrailPoint[]>();
+
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 let reducedMotion = reducedMotionQuery.matches;
 
@@ -54,10 +78,50 @@ reducedMotionQuery.addEventListener("change", (e) => {
 window.addEventListener("pointermove", (e) => {
   cursor.x = e.clientX;
   cursor.y = e.clientY;
+  cursorTrail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+});
+
+canvas.addEventListener("pointerdown", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  const now = performance.now();
+
+  // 1. Add interactive ripple
+  ripples.push({ x: clickX, y: clickY, startTime: now, duration: 600 });
+
+  // 2. Check if user tapped directly on a bot to poke it
+  for (const b of bots) {
+    const dist = Math.hypot(b.x - clickX, b.y - clickY);
+    if (dist <= b.r * 2.2) {
+      b.hopOffset = -22;
+      b.vx += (Math.random() - 0.5) * 40;
+      b.vy += -30;
+      showToast(`*poke*`, 800);
+      return;
+    }
+  }
+
+  // 3. Shockwave impulse on nearby bots
+  for (const b of bots) {
+    const dx = b.x - clickX;
+    const dy = b.y - clickY;
+    const dist = Math.hypot(dx, dy) || 1;
+    if (dist < 180) {
+      const force = (1 - dist / 180) * 45;
+      b.vx += (dx / dist) * force;
+      b.vy += (dy / dist) * force;
+      b.hopOffset = -12;
+    }
+  }
 });
 
 let bots: Bot[] = createAllBots(window.innerWidth, window.innerHeight);
 applyStatsToBots(bots, botStats);
+
+for (const b of bots) {
+  botTrails.set(b.id, []);
+}
 
 let inputBarRect: Rect | null = null;
 let lastWinnerPos: { x: number; y: number } | null = null;
@@ -78,27 +142,84 @@ function updateInputRect(): void {
   }
 }
 
+/**
+ * Minimalist white background with subtle micro-grid.
+ */
 export function drawGrid(context: CanvasRenderingContext2D, w: number, h: number): void {
-  context.fillStyle = "#0B0D10";
+  context.fillStyle = "#FFFFFF";
   context.fillRect(0, 0, w, h);
 
-  context.strokeStyle = "#14181D";
-  context.lineWidth = 1;
-  context.beginPath();
-
-  const cellSize = 24;
-  for (let x = 0; x <= w; x += cellSize) {
-    context.moveTo(x + 0.5, 0);
-    context.lineTo(x + 0.5, h);
+  // Subtle clean micro-dot grid
+  context.fillStyle = "#E4E4E7";
+  const spacing = 28;
+  for (let x = spacing; x < w; x += spacing) {
+    for (let y = spacing; y < h; y += spacing) {
+      context.beginPath();
+      context.arc(x, y, 1, 0, Math.PI * 2);
+      context.fill();
+    }
   }
-  for (let y = 0; y <= h; y += cellSize) {
-    context.moveTo(0, y + 0.5);
-    context.lineTo(w, y + 0.5);
-  }
-  context.stroke();
 }
 
-function handleStateUpdate(now: number): void {
+/**
+ * Draws interactive cursor trail and ripples.
+ */
+function drawInteractions(context: CanvasRenderingContext2D, now: number): void {
+  // 1. Cursor trail
+  const maxTrailAge = 400;
+  while (cursorTrail.length > 0 && now - cursorTrail[0].t > maxTrailAge) {
+    cursorTrail.shift();
+  }
+
+  if (cursorTrail.length > 1 && !reducedMotion) {
+    context.save();
+    for (let i = 1; i < cursorTrail.length; i++) {
+      const p1 = cursorTrail[i - 1];
+      const p2 = cursorTrail[i];
+      const age = now - p2.t;
+      const alpha = (1 - age / maxTrailAge) * 0.25;
+      context.strokeStyle = `rgba(24, 24, 27, ${alpha})`;
+      context.lineWidth = 1.5 * (1 - age / maxTrailAge);
+      context.beginPath();
+      context.moveTo(p1.x, p1.y);
+      context.lineTo(p2.x, p2.y);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  // 2. Click ripples
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    const elapsed = now - r.startTime;
+    if (elapsed > r.duration) {
+      ripples.splice(i, 1);
+      continue;
+    }
+
+    const progress = elapsed / r.duration;
+    const currentRadius = progress * 65;
+    const alpha = (1 - progress) * 0.35;
+
+    context.save();
+    context.strokeStyle = `rgba(24, 24, 27, ${alpha})`;
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(r.x, r.y, currentRadius, 0, Math.PI * 2);
+    context.stroke();
+    context.restore();
+  }
+}
+
+function handleStateUpdate(now: number, dt: number): void {
+  // Update hop spring physics
+  for (const b of bots) {
+    if (b.hopOffset && b.hopOffset !== 0) {
+      b.hopOffset += (0 - b.hopOffset) * Math.min(1, dt * 10);
+      if (Math.abs(b.hopOffset) < 0.2) b.hopOffset = 0;
+    }
+  }
+
   if (appState === "REVEALING") {
     const elapsed = now - revealStartTime;
     const progress = reducedMotion ? 1 : Math.min(1, elapsed / 600);
@@ -173,7 +294,7 @@ export const renderLoop = createRenderLoop(canvas, {
     }
   },
   onUpdate: (dt, now) => {
-    handleStateUpdate(now);
+    handleStateUpdate(now, dt);
 
     const dims = renderLoop.getDimensions();
     updateSteering(bots, {
@@ -186,16 +307,39 @@ export const renderLoop = createRenderLoop(canvas, {
       freezeWander: appState === "REVEALING" || appState === "SETTLED",
       reducedMotion,
     });
+
+    // Record wandering path coordinates
+    for (const b of bots) {
+      const trail = botTrails.get(b.id);
+      if (trail) {
+        const last = trail[trail.length - 1];
+        if (!last || Math.hypot(b.x - last.x, b.y - last.y) > 6) {
+          trail.push({ x: b.x, y: b.y, t: now });
+          if (trail.length > 50) trail.shift();
+        }
+      }
+    }
   },
   onRender: (now) => {
     const dims = renderLoop.getDimensions();
     ctx.clearRect(0, 0, dims.width, dims.height);
     drawGrid(ctx, dims.width, dims.height);
 
+    // 1. Draw ephemeral roaming trails for each agent
+    for (const b of bots) {
+      const trail = botTrails.get(b.id);
+      if (trail) {
+        drawRoamingTrail(ctx, trail, b.color, now);
+      }
+    }
+
+    // 2. Draw interactive cursor trails and ripples
+    drawInteractions(ctx, now);
+
     const elapsed = (appState === "REVEALING" || appState === "SETTLED") ? now - revealStartTime : 0;
     const isCoinFlip = currentResult?.coinFlip ?? false;
 
-    // 1. Draw bots
+    // 3. Draw bots (Shape + Expressive Eyes + Handheld Board)
     for (let i = 0; i < bots.length; i++) {
       const b = bots[i];
       const isTopCoinPair = isCoinFlip && coinFlipTopPair && (i === coinFlipTopPair[0] || i === coinFlipTopPair[1]);
@@ -204,14 +348,14 @@ export const renderLoop = createRenderLoop(canvas, {
       drawBot(ctx, b, now, cursor, reducedMotion, lookAtCamera);
     }
 
-    // 2. Draw nerd tags (AFTER drawBot)
+    // 4. Draw nerd tags (AFTER drawBot)
     if (isNerdActive) {
       for (let i = 0; i < bots.length; i++) {
         drawNerdTag(ctx, bots[i], dims.width);
       }
     }
 
-    // 3. Draw crowns & speech bubbles
+    // 5. Draw crowns & speech bubbles
     if (appState === "REVEALING" || appState === "SETTLED") {
       for (let i = 0; i < bots.length; i++) {
         const b = bots[i];
@@ -228,7 +372,7 @@ export async function onUserSubmit(question: string): Promise<void> {
   appState = "THINKING";
   roundRecorded = false;
   inputController?.setDisabled(true);
-  showToast("the robots are conferring…", 2000);
+  showToast("conferring…", 2000);
 
   const res = await decide(question);
   if (!res.ok) {
@@ -294,7 +438,7 @@ amnesiaBtn?.addEventListener("click", () => {
   botStats = resetBotStats();
   applyStatsToBots(bots, botStats);
   lastWinnerPos = null;
-  showToast("forget everything", 1500);
+  showToast("memories cleared", 1500);
 });
 
 updateInputRect();

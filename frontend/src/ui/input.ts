@@ -108,6 +108,11 @@ export function setupInputBar(
   input.addEventListener("paste", handlePaste);
   form.addEventListener("submit", handleSubmit);
 
+  const submitBtn = form.querySelector(".submit-btn") as HTMLElement | null;
+  submitBtn?.addEventListener("click", (e) => {
+    handleSubmit(e);
+  });
+
   input.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       handleSubmit(e);
