@@ -90,3 +90,19 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Vite Dev Worker Bridge**: Connected Vite dev server (`http://localhost:5173/api/decide`) directly to the Cloudflare Worker runtime logic using local `.env` variables for seamless local testing without secret leakage.
 - **Live End-to-End Validation**: Verified live API decision and browser animation (`Should I adopt a robot?`), verifying argmax winner, crown animation, speech bubble, and amnesia reset.
 
+## M14: Minimalist Geometric White UI & Interactive Handheld Placards
+- **White Sketchbook Canvas**: Shifted from dark theme to clean white background (`#FFFFFF`) with subtle 28px micro-dot architectural grid.
+- **4 Distinct Geometric Shapes & Primary Colors**:
+  - Circle (Blue `#2563EB`)
+  - Triangle (Green `#16A34A`)
+  - Diamond (Red `#DC2626`)
+  - Squircle / Round-edged Square (Yellow `#EAB308`)
+- **Handheld Option & Probability Boards**: Unnamed bots physically carry placards displaying bold probability percentages and formulated option copy, tilting dynamically with steering velocity.
+- **Tactile Non-AI Human Interactivity**:
+  - Ephemeral colored roaming dashed trails showing paths as agents wander across the white canvas.
+  - Interactive click ripple shockwaves pushing nearby bots with tactile physics.
+  - Expressive animated eyes tracking the cursor smoothly with natural periodic blinks.
+  - Direct bot poke reactions with playful hop physics.
+- **Minimalist Bauhaus / Swiss Styling**: High-contrast black outlines (`#18181B`), pill-shaped floating search input bar, and clean typography.
+
+
