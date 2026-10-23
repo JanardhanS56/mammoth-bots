@@ -34,3 +34,8 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **CORS & Error Envelope**: Configured preflight OPTIONS and standardized error envelope (`BAD_INPUT`, `UPSTREAM`, `RATE_LIMIT`).
 - **Validation & Hashing**: Sanitized input strings (trimming, collapse inner whitespace, lowercase) and computed deterministic SHA-256 hash using Web Crypto `crypto.subtle`.
 - **Response Normalization**: Created `buildDecideResponse()` ensuring exactly 4 fixed slots (`no`, `yes`, `jester`, `prophet`), exact probability summation to 1.0000, argmax winner identification, margin calculation, and `coinFlip` flag (< 0.05). Verified with automated tests.
+
+## M5: Groq Integration & Schema Validation with Single Retry
+- **Prompt Standardization**: Embedded verbatim `GROQ_SYSTEM_PROMPT` in `prompt.ts`, instructing model `llama-3.3-70b-versatile` with temperature 0.95 and JSON object response format.
+- **Defensive Parsing & Validation**: Enforced strict validation on Groq response ensuring exactly 4 ordered options, non-empty labels (2-5 words), and legalistic comedic descriptions.
+- **Fail-Safe Retry**: Implemented automatic single retry on network failure or schema violation; on repeated failure, cleanly returns 502 `UPSTREAM` with error envelope.

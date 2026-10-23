@@ -1,5 +1,6 @@
 import { validateQuestion, sha256Hex } from "./validate";
 import { buildDecideResponse, DecideResponse } from "./normalize";
+import { callGroqWithRetry, GroqOption } from "./groq";
 
 export interface Env {
   GROQ_API_KEY?: string;
@@ -33,7 +34,7 @@ export function errorResponse(code: "BAD_INPUT" | "UPSTREAM" | "RATE_LIMIT", mes
 }
 
 export default {
-  async fetch(request: Request, _env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -58,22 +59,38 @@ export default {
 
       const hash = await sha256Hex(validation.normalized);
 
-      // M4: Hardcoded fake data
-      const fakeOptions = [
-        { label: "Absolutely not", description: "Choosing this rejects the premise outright." },
-        { label: "Do it now", description: "Choosing this encourages immediate and fearless action." },
-        { label: "Eat a shoe instead", description: "Choosing this redirects all energy toward footwear consumption." },
-        { label: "The void awaits", description: "Choosing this concedes to impending entropy." },
-      ];
+      let state = "The user asks a question.";
+      let options: [GroqOption, GroqOption, GroqOption, GroqOption];
+      let groqTiming = 0;
 
+      if (env.GROQ_API_KEY) {
+        const groqResult = await callGroqWithRetry(env.GROQ_API_KEY, validation.normalized);
+        if (!groqResult) {
+          return errorResponse("UPSTREAM", "The robots were unable to formulate decisions.", 502);
+        }
+        state = groqResult.state;
+        options = groqResult.options;
+        groqTiming = groqResult.timing;
+      } else {
+        // Fallback options when key is not configured (e.g. testing)
+        options = [
+          { label: "Absolutely not", description: "Choosing this rejects the premise outright." },
+          { label: "Do it now", description: "Choosing this encourages immediate and fearless action." },
+          { label: "Eat a shoe instead", description: "Choosing this redirects all energy toward footwear consumption." },
+          { label: "The void awaits", description: "Choosing this concedes to impending entropy." },
+        ];
+        groqTiming = 5;
+      }
+
+      // In M5, Mammoth is still mocked; real Mammoth adapter comes in M6
       const decideResponse: DecideResponse = buildDecideResponse({
         id: hash,
-        state: "The user is contemplating whether to proceed.",
-        rawOptions: fakeOptions,
+        state,
+        rawOptions: options,
         probabilities: [0.15, 0.55, 0.2, 0.1],
         fallback: false,
         cached: false,
-        timings: { groq: 120, mammoth: 180 },
+        timings: { groq: groqTiming, mammoth: 0 },
       });
 
       return jsonResponse(decideResponse, 200);
