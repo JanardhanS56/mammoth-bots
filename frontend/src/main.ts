@@ -249,6 +249,10 @@ export async function onUserSubmit(question: string): Promise<void> {
   revealStartTime = performance.now();
   appState = "REVEALING";
 
+  if (res.data.fallback) {
+    showToast("the robots forgot how to decide", 3000);
+  }
+
   const sortedIndices = res.data.options
     .map((o, idx) => ({ idx, p: o.p }))
     .sort((a, b) => b.p - a.p)

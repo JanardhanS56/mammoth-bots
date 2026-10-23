@@ -72,3 +72,9 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
   - Asymmetric sad squash (vertical flattening + horizontal bulging).
   - Loser sulking: bots with `mood < -0.4` actively steer away from the last winner's location (`lastWinnerPos`).
 - **Natural Decay & Amnesia**: On page load, `decayStreaks()` cuts streaks in half towards 0 (`floor/2` or `ceil/2`) to prevent bots from remaining permanently depressed. Clicking `[forget everything]` completely wipes `mammoth-bots-v1` and resets all robots to neutral baseline.
+
+## M11: Two-Tier Caching, Token-Bucket Rate Limiting & Accessibility Hardening
+- **Server-Side KV Caching**: Cached full `DecideResponse` instances by normalized query hash `decide:<sha256>` with 24-hour expiration TTL (`86400s`), returning instantly with `cached: true`.
+- **IP Token Bucket Rate Limiting**: Enforced rate limiting of 10 requests per hour per IP via Cloudflare KV key `rate:<clientIp>:<hourWindow>`, issuing HTTP 429 and toast `"the robots need a break"` on exhaustion.
+- **Fail-Safe Shrug Animation**: On Mammoth API timeout or key disruption, automatically delivers uniform `0.25` distribution with `fallback: true` and toast `"the robots forgot how to decide"`. All bots shrug at equal size with zero broken states.
+- **Full Accessibility Compliance**: Mirrored outcomes into `aria-live="polite"` region, provided sr-only form labels, real button elements with `aria-pressed`, and instant one-frame reveals under `prefers-reduced-motion: reduce`.

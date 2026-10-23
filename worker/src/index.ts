@@ -2,6 +2,7 @@ import { validateQuestion, sha256Hex } from "./validate";
 import { buildDecideResponse, DecideResponse } from "./normalize";
 import { callGroqWithRetry, GroqOption } from "./groq";
 import { scoreOptions } from "./mammoth";
+import { getCachedDecide, setCachedDecide, checkRateLimit } from "./cache";
 
 export interface Env {
   GROQ_API_KEY?: string;
@@ -46,6 +47,14 @@ export default {
     }
 
     if (url.pathname === "/api/decide" && request.method === "POST") {
+      const clientIp = request.headers.get("cf-connecting-ip") || "127.0.0.1";
+
+      // Rate limit check: 10 requests / hour per IP
+      const rateLimit = await checkRateLimit(env.MAMMOTH_KV, clientIp);
+      if (!rateLimit.allowed) {
+        return errorResponse("RATE_LIMIT", "the robots need a break", 429);
+      }
+
       let body: any;
       try {
         body = await request.json();
@@ -59,6 +68,12 @@ export default {
       }
 
       const hash = await sha256Hex(validation.normalized);
+
+      // Server KV cache check (TTL 24h)
+      const cached = await getCachedDecide(env.MAMMOTH_KV, hash);
+      if (cached) {
+        return jsonResponse(cached, 200);
+      }
 
       let state = "The user contemplates their options.";
       let options: [GroqOption, GroqOption, GroqOption, GroqOption];
@@ -94,6 +109,9 @@ export default {
         cached: false,
         timings: { groq: groqTiming, mammoth: mammothResult.timing },
       });
+
+      // Save to KV cache
+      await setCachedDecide(env.MAMMOTH_KV, hash, decideResponse);
 
       return jsonResponse(decideResponse, 200);
     }
