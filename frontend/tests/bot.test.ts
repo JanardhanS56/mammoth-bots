@@ -6,10 +6,11 @@ describe("bots/Bot", () => {
     const bot = createBot(0, 100, 200);
     expect(bot.id).toBe(0);
     expect(bot.slot).toBe("no");
-    expect(bot.color).toBe("#FF5D5D");
+    expect(bot.color).toBe("#2563EB");
+    expect(bot.shape).toBe("circle");
     expect(bot.x).toBe(100);
     expect(bot.y).toBe(200);
-    expect(bot.r).toBe(22);
+    expect(bot.r).toBe(24);
     expect(bot.streak).toBe(0);
     expect(bot.mood).toBe(0);
     expect(bot.revealScale).toBe(1);

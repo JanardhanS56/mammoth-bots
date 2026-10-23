@@ -10,8 +10,14 @@
     <canvas id="bots-canvas"></canvas>
 
     <header class="top-bar">
-      <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">forget everything</button>
-      <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?]</button>
+      <div class="brand-title">
+        <span class="brand-dot"></span>
+        <span>mammoth bots</span>
+      </div>
+      <div class="top-actions">
+        <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">forget</button>
+        <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?]</button>
+      </div>
     </header>
 
     <div id="nerd-panel" class="nerd-panel" aria-hidden="true"></div>
@@ -23,13 +29,16 @@
           type="text"
           id="question-input"
           class="question-input"
-          placeholder="ask the robots something…"
+          placeholder="Ask a question…"
           maxlength="100"
           autocomplete="off"
           spellcheck="false"
         />
         <div class="input-meta">
           <span id="char-counter" class="char-counter">0</span>
+          <button type="submit" class="submit-btn" aria-label="Submit question">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
         </div>
       </form>
       <div id="input-hint" class="input-hint" aria-live="polite"></div>

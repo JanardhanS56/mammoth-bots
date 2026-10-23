@@ -1,9 +1,11 @@
 export type BotSlot = "no" | "yes" | "jester" | "prophet";
+export type BotShape = "circle" | "triangle" | "diamond" | "squircle";
 
 export interface Bot {
   id: 0 | 1 | 2 | 3;
   slot: BotSlot;
   color: string;
+  shape: BotShape;
   r: number;
   x: number;
   y: number;
@@ -24,13 +26,24 @@ export interface Bot {
 
   streak: number;
   mood: number;
+
+  // Visual interactivity state
+  blinkTimer?: number;
+  isBlinking?: boolean;
+  hopOffset?: number;
+  clickAnim?: number;
 }
 
-export const BOT_CONFIGS: Array<{ id: 0 | 1 | 2 | 3; slot: BotSlot; color: string }> = [
-  { id: 0, slot: "no", color: "#FF5D5D" },
-  { id: 1, slot: "yes", color: "#4ADE80" },
-  { id: 2, slot: "jester", color: "#FBBF24" },
-  { id: 3, slot: "prophet", color: "#A78BFA" },
+export const BOT_CONFIGS: Array<{
+  id: 0 | 1 | 2 | 3;
+  slot: BotSlot;
+  color: string;
+  shape: BotShape;
+}> = [
+  { id: 0, slot: "no", color: "#2563EB", shape: "circle" },
+  { id: 1, slot: "yes", color: "#16A34A", shape: "triangle" },
+  { id: 2, slot: "jester", color: "#DC2626", shape: "diamond" },
+  { id: 3, slot: "prophet", color: "#EAB308", shape: "squircle" },
 ];
 
 export function createBot(id: 0 | 1 | 2 | 3, x: number, y: number): Bot {
@@ -39,7 +52,8 @@ export function createBot(id: 0 | 1 | 2 | 3, x: number, y: number): Bot {
     id,
     slot: config.slot,
     color: config.color,
-    r: 22,
+    shape: config.shape,
+    r: 24,
     x,
     y,
     vx: 0,
