@@ -28,3 +28,9 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Validation & Limits**: Enforced 100-character ceiling on input and clipboard paste events. Pasting strings over 100 characters truncates to 100 and shows exact microcopy `"that's a lot of words"`.
 - **Character Counter**: Monospace character count turning red (`#FF5D5D`) at 91+ characters.
 - **State Machine Safeguards**: Enter and submit triggers are disabled unless client state is `IDLE`. Empty submissions trigger 300ms CSS shake without error text.
+
+## M4: Worker Scaffold & Contract-Compliant Decide Endpoint
+- **Cloudflare Worker Setup**: Created zero-dependency plain fetch handler with strict TypeScript configuration and Wrangler bindings.
+- **CORS & Error Envelope**: Configured preflight OPTIONS and standardized error envelope (`BAD_INPUT`, `UPSTREAM`, `RATE_LIMIT`).
+- **Validation & Hashing**: Sanitized input strings (trimming, collapse inner whitespace, lowercase) and computed deterministic SHA-256 hash using Web Crypto `crypto.subtle`.
+- **Response Normalization**: Created `buildDecideResponse()` ensuring exactly 4 fixed slots (`no`, `yes`, `jester`, `prophet`), exact probability summation to 1.0000, argmax winner identification, margin calculation, and `coinFlip` flag (< 0.05). Verified with automated tests.

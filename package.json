@@ -6,7 +6,7 @@
     "worker"
   ],
   "scripts": {
-    "test": "npm run test -w frontend",
+    "test": "npm run test --workspaces",
     "lint": "echo lint clean",
     "build": "npm run build -w frontend"
   }

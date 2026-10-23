@@ -1,0 +1,11 @@
+name = "mammoth-bots-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+[[kv_namespaces]]
+binding = "MAMMOTH_KV"
+id = "mammoth_kv_id"
+preview_id = "mammoth_kv_preview"
