@@ -8,6 +8,14 @@ import { decide, DecideResponse } from "./api";
 import { showToast } from "./ui/toast";
 import { easeOutCubic, lerp } from "./lib/ease";
 import { setupNerdMode, NerdController } from "./ui/nerd";
+import {
+  loadBotStats,
+  decayStreaks,
+  recordRoundResult,
+  resetBotStats,
+  applyStatsToBots,
+  BotStatsRecord,
+} from "./bots/moods";
 
 export type AppState = "IDLE" | "THINKING" | "REVEALING" | "SETTLED";
 
@@ -21,6 +29,7 @@ const inputHint = document.getElementById("input-hint") as HTMLElement;
 const a11yResult = document.getElementById("a11y-result") as HTMLElement;
 const nerdToggle = document.getElementById("nerd-toggle") as HTMLButtonElement | null;
 const nerdPanel = document.getElementById("nerd-panel") as HTMLElement | null;
+const amnesiaBtn = document.getElementById("amnesia-btn") as HTMLButtonElement | null;
 
 let appState: AppState = "IDLE";
 let currentResult: DecideResponse | null = null;
@@ -29,6 +38,10 @@ const startScales: number[] = [1, 1, 1, 1];
 const startPs: number[] = [0.25, 0.25, 0.25, 0.25];
 let coinFlipTopPair: [number, number] | null = null;
 let isNerdActive = false;
+let roundRecorded = false;
+
+// Persistent moods initialization with decay on load
+let botStats: BotStatsRecord = decayStreaks(loadBotStats());
 
 const cursor = { x: 0, y: 0 };
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -44,6 +57,8 @@ window.addEventListener("pointermove", (e) => {
 });
 
 let bots: Bot[] = createAllBots(window.innerWidth, window.innerHeight);
+applyStatsToBots(bots, botStats);
+
 let inputBarRect: Rect | null = null;
 let lastWinnerPos: { x: number; y: number } | null = null;
 
@@ -129,6 +144,15 @@ function handleStateUpdate(now: number): void {
     }
   } else if (appState === "SETTLED") {
     const elapsed = now - revealStartTime;
+
+    // t=800: recordResult(), recompute moods
+    if (elapsed >= 800 && !roundRecorded && currentResult) {
+      roundRecorded = true;
+      const winnerSlot = bots[currentResult.chosenId].slot;
+      botStats = recordRoundResult(botStats, winnerSlot);
+      applyStatsToBots(bots, botStats);
+    }
+
     if (elapsed >= 1400) {
       appState = "IDLE";
       inputController?.setDisabled(false);
@@ -202,6 +226,7 @@ export async function onUserSubmit(question: string): Promise<void> {
   if (appState !== "IDLE") return;
 
   appState = "THINKING";
+  roundRecorded = false;
   inputController?.setDisabled(true);
   showToast("the robots are conferring…", 2000);
 
@@ -244,7 +269,6 @@ export async function onUserSubmit(question: string): Promise<void> {
     b.chosen = res.data.chosenId === b.id;
   }
 
-  // Update nerd panel
   nerdController.updatePanel({
     state: res.data.state,
     chosenSlot: res.data.options[res.data.chosenId]?.slot,
@@ -261,6 +285,13 @@ if (questionInput && charCounter && inputHint && questionForm && inputContainer)
     onSubmit: onUserSubmit,
   });
 }
+
+amnesiaBtn?.addEventListener("click", () => {
+  botStats = resetBotStats();
+  applyStatsToBots(bots, botStats);
+  lastWinnerPos = null;
+  showToast("forget everything", 1500);
+});
 
 updateInputRect();
 renderLoop.start();

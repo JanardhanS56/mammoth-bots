@@ -62,3 +62,13 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Per-Bot Floating Tags**: Rendered 26px above bot top boundary, clamped to `y >= 40` to avoid viewport clipping. Displays option label, formatted whole-number percentage (`NN%` - never raw floats), and 96×6px probability bar (full bot color for winner, 50% alpha for others).
 - **Responsive Layout**: On mobile viewports under 480px, automatically drops the label line to conserve vertical canvas space while keeping the bar and percentage.
 - **Nerd Telemetry Panel**: Fixed bottom-left 11px monospace panel showing neutral restatement `state`, `chosen` slot, `margin` %, and `⚠ coin flip` warning when margin < 0.05.
+
+## M10: Persistent Moods, Streaks, Halos, and Amnesia Reset
+- **Persistent Memory Model**: Preserved win/loss history under `mammoth-bots-v1` in `localStorage`, updating win streaks (`max(1, s+1)`) and loss streaks (`min(-1, s-1)`), clamped strictly within `[-6, 6]`.
+- **Physical Mood Representation**: Mood `clamp(streak / 3, -1, 1)` drives:
+  - Multiplicative scale (`moodScale * revealScale`), preserving relative reveal hierarchy.
+  - Antenna drooping from `-0.55 * mood` radians.
+  - Halo radial brightness and alpha (`0.18 → 0.48`).
+  - Asymmetric sad squash (vertical flattening + horizontal bulging).
+  - Loser sulking: bots with `mood < -0.4` actively steer away from the last winner's location (`lastWinnerPos`).
+- **Natural Decay & Amnesia**: On page load, `decayStreaks()` cuts streaks in half towards 0 (`floor/2` or `ceil/2`) to prevent bots from remaining permanently depressed. Clicking `[forget everything]` completely wipes `mammoth-bots-v1` and resets all robots to neutral baseline.
