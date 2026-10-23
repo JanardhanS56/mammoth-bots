@@ -39,3 +39,8 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Prompt Standardization**: Embedded verbatim `GROQ_SYSTEM_PROMPT` in `prompt.ts`, instructing model `llama-3.3-70b-versatile` with temperature 0.95 and JSON object response format.
 - **Defensive Parsing & Validation**: Enforced strict validation on Groq response ensuring exactly 4 ordered options, non-empty labels (2-5 words), and legalistic comedic descriptions.
 - **Fail-Safe Retry**: Implemented automatic single retry on network failure or schema violation; on repeated failure, cleanly returns 502 `UPSTREAM` with error envelope.
+
+## M6: Mammoth Vendor Firewall & Defensive Probability Adapter
+- **Strict Isolation**: Confined all knowledge of Baseten/Mammoth request and response wire formats to `worker/src/mammoth.ts`.
+- **Defensive Multi-Format Extractor**: Handled array-based, question-nested, and label-keyed response payloads; parses stringly-typed numbers and NaN values defensively.
+- **Zero-Failure Guarantee**: On missing API key, network timeout, or schema mutation, silently defaults to uniform `[0.25, 0.25, 0.25, 0.25]` with `fallback: true` and `ok: false`. Never raises 500.

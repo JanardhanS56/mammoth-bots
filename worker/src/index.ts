@@ -1,6 +1,7 @@
 import { validateQuestion, sha256Hex } from "./validate";
 import { buildDecideResponse, DecideResponse } from "./normalize";
 import { callGroqWithRetry, GroqOption } from "./groq";
+import { scoreOptions } from "./mammoth";
 
 export interface Env {
   GROQ_API_KEY?: string;
@@ -59,7 +60,7 @@ export default {
 
       const hash = await sha256Hex(validation.normalized);
 
-      let state = "The user asks a question.";
+      let state = "The user contemplates their options.";
       let options: [GroqOption, GroqOption, GroqOption, GroqOption];
       let groqTiming = 0;
 
@@ -72,25 +73,26 @@ export default {
         options = groqResult.options;
         groqTiming = groqResult.timing;
       } else {
-        // Fallback options when key is not configured (e.g. testing)
         options = [
           { label: "Absolutely not", description: "Choosing this rejects the premise outright." },
           { label: "Do it now", description: "Choosing this encourages immediate and fearless action." },
           { label: "Eat a shoe instead", description: "Choosing this redirects all energy toward footwear consumption." },
           { label: "The void awaits", description: "Choosing this concedes to impending entropy." },
         ];
-        groqTiming = 5;
+        groqTiming = 10;
       }
 
-      // In M5, Mammoth is still mocked; real Mammoth adapter comes in M6
+      // Mammoth-1 decision model scoring via vendor firewall
+      const mammothResult = await scoreOptions(env.BASETEN_API_KEY, state, options);
+
       const decideResponse: DecideResponse = buildDecideResponse({
         id: hash,
         state,
         rawOptions: options,
-        probabilities: [0.15, 0.55, 0.2, 0.1],
-        fallback: false,
+        probabilities: mammothResult.p,
+        fallback: !mammothResult.ok,
         cached: false,
-        timings: { groq: groqTiming, mammoth: 0 },
+        timings: { groq: groqTiming, mammoth: mammothResult.timing },
       });
 
       return jsonResponse(decideResponse, 200);
