@@ -44,3 +44,10 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Strict Isolation**: Confined all knowledge of Baseten/Mammoth request and response wire formats to `worker/src/mammoth.ts`.
 - **Defensive Multi-Format Extractor**: Handled array-based, question-nested, and label-keyed response payloads; parses stringly-typed numbers and NaN values defensively.
 - **Zero-Failure Guarantee**: On missing API key, network timeout, or schema mutation, silently defaults to uniform `[0.25, 0.25, 0.25, 0.25]` with `fallback: true` and `ok: false`. Never raises 500.
+
+## M7: Reveal Animation & Client State Machine
+- **State Flow**: Integrated strict state progression: `IDLE` → `THINKING` → `REVEALING` (600ms) → `SETTLED` (800ms) → `IDLE`.
+- **Wander Freeze**: Freezes bot steering turning force during reveal phase (`turnRate = 0`).
+- **Ease-Out Cubic Lerp**: Scales bots smoothly over 600ms according to target formula `targetScale = 0.6 + p` (0.6× for p=0 to 1.6× for p=1), ensuring the winner is visibly largest.
+- **Session Caching**: Wrapped API calls with client `sessionStorage` cache under key `mammoth-cache-v1` with immediate instant recall for identical questions.
+- **Accessibility Mirroring**: Mirrored verdict and probability into `#a11y-result` with `aria-live="polite"`.
