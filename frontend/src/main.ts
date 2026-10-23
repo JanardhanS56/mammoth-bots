@@ -2,14 +2,22 @@ import "./styles.css";
 import { createAllBots } from "./bots/Bot";
 import { drawBot } from "./bots/render";
 import { updateSteering, Rect } from "./bots/steering";
+import { setupInputBar, InputBarController } from "./ui/input";
+
+export type AppState = "IDLE" | "THINKING" | "REVEALING" | "SETTLED";
 
 const canvas = document.getElementById("bots-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const inputContainer = document.getElementById("input-container") as HTMLElement;
+const questionForm = document.getElementById("question-form") as HTMLFormElement;
+const questionInput = document.getElementById("question-input") as HTMLInputElement;
+const charCounter = document.getElementById("char-counter") as HTMLElement;
+const inputHint = document.getElementById("input-hint") as HTMLElement;
 
 let dpr = 1;
 let width = window.innerWidth;
 let height = window.innerHeight;
+let appState: AppState = "IDLE";
 
 const cursor = { x: 0, y: 0 };
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -89,7 +97,7 @@ function frame(now: number): void {
     inputBarRect,
     cursor,
     lastWinnerPos,
-    freezeWander: false,
+    freezeWander: appState === "REVEALING",
     reducedMotion,
   });
 
@@ -128,6 +136,17 @@ document.addEventListener("visibilitychange", () => {
     startLoop();
   }
 });
+
+export let inputController: InputBarController | null = null;
+if (questionInput && charCounter && inputHint && questionForm && inputContainer) {
+  inputController = setupInputBar(inputContainer, questionInput, charCounter, inputHint, questionForm, {
+    canSubmit: () => appState === "IDLE",
+    onSubmit: (question) => {
+      // Handled in later milestones via api.ts
+      console.log("Question submitted:", question);
+    },
+  });
+}
 
 resizeCanvas();
 startLoop();
