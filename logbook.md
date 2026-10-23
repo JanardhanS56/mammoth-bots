@@ -56,3 +56,9 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Winner's Crown Animation**: Implemented 3-point gold crown popping at t=200ms with scale overshoot curve (`0 → 1.15 → 1.0` over 300ms) sitting directly atop the winner bot.
 - **Microcopy-Driven Speech Bubbles**: Bubbles pop in at t=600ms; winner says its option label (or `"ha."` on winning streaks ≥ 2); losers react with `"…"`, `"hmph."`, or `"why do I even"` based on streak depth.
 - **Coin-Flip Near-Tie Behavior**: When `margin < 0.05` (`coinFlip: true`), crown is strictly suppressed; top two bots physically bump twice into each other between 150ms and 550ms, then break contact and stare straight into the camera (eye offsets = 0, 0).
+
+## M9: Nerd Mode Inspector (Tags, Toggle & Metrics Panel)
+- **Persistent Toggle & Peek**: Created `setupNerdMode()` with toggle button (`[?]`) persisting state under `mammoth-nerd-v1` in `localStorage`, plus instantaneous keyboard peek on holding `H` or `?`.
+- **Per-Bot Floating Tags**: Rendered 26px above bot top boundary, clamped to `y >= 40` to avoid viewport clipping. Displays option label, formatted whole-number percentage (`NN%` - never raw floats), and 96×6px probability bar (full bot color for winner, 50% alpha for others).
+- **Responsive Layout**: On mobile viewports under 480px, automatically drops the label line to conserve vertical canvas space while keeping the bar and percentage.
+- **Nerd Telemetry Panel**: Fixed bottom-left 11px monospace panel showing neutral restatement `state`, `chosen` slot, `margin` %, and `⚠ coin flip` warning when margin < 0.05.

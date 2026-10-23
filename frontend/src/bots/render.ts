@@ -46,7 +46,7 @@ export function drawCrown(
   ctx.fill();
   ctx.stroke();
 
-  // Little jewels at points
+  // Jewels at points
   ctx.fillStyle = "#FFF";
   ctx.beginPath();
   ctx.arc(-14, -8, 1.5, 0, Math.PI * 2);
@@ -82,6 +82,7 @@ export function drawSpeech(
   const textMetrics = ctx.measureText(text);
   const paddingX = 10;
   const paddingY = 6;
+  void paddingY;
   const bubbleWidth = textMetrics.width + paddingX * 2;
   const bubbleHeight = 24;
 
@@ -118,6 +119,60 @@ export function drawSpeech(
   ctx.restore();
 }
 
+export function drawNerdTag(
+  ctx: CanvasRenderingContext2D,
+  bot: Bot,
+  viewportWidth: number
+): void {
+  const moodScale = 1 + 0.06 * bot.mood;
+  const totalScale = moodScale * bot.revealScale;
+
+  // 26px above bot top boundary, clamped to >= 40px from top
+  const botTopY = bot.y - bot.r * totalScale;
+  const tagY = Math.max(40, botTopY - 26);
+
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.font = "11px ui-monospace, 'SFMono-Regular', Menlo, monospace";
+
+  const showLabel = viewportWidth >= 480;
+  const percentText = `${Math.round(bot.pDisplay * 100)}%`;
+
+  // Draw label line if screen >= 480px
+  if (showLabel) {
+    const labelText = bot.label || bot.slot;
+    ctx.fillStyle = "#E8ECF1";
+    ctx.fillText(labelText, bot.x, tagY - 10);
+  }
+
+  // Draw 96x6px probability bar
+  const barW = 96;
+  const barH = 6;
+  const barX = bot.x - barW / 2;
+  const barY = tagY;
+
+  // Background track
+  ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.beginPath();
+  ctx.roundRect(barX, barY, barW, barH, 3);
+  ctx.fill();
+
+  // Filled bar: winner full color, others 50% alpha
+  const fillW = Math.max(0, Math.min(barW, Math.round(bot.pDisplay * barW)));
+  ctx.fillStyle = bot.chosen ? bot.color : hexA(bot.color, 0.5);
+  if (fillW > 0) {
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, fillW, barH, 3);
+    ctx.fill();
+  }
+
+  // Percent text below bar
+  ctx.fillStyle = "#6B7685";
+  ctx.fillText(percentText, bot.x, barY + barH + 11);
+
+  ctx.restore();
+}
+
 export function drawBot(
   ctx: CanvasRenderingContext2D,
   bot: Bot,
@@ -126,15 +181,12 @@ export function drawBot(
   reducedMotion: boolean = false,
   lookAtCamera: boolean = false
 ): void {
-  // Bob motion: period 2400ms, amplitude (3 + 2 * mood)
   const bobAmp = reducedMotion ? 0 : 3 + 2 * bot.mood;
   const bob = reducedMotion ? 0 : Math.sin((t / 2400) * 2 * Math.PI + bot.seed) * bobAmp;
 
-  // Scale: mood drives ±6%, multiplied by revealScale
   const moodScale = 1 + 0.06 * bot.mood;
   const totalScale = moodScale * bot.revealScale;
 
-  // Sad squash: vertical squash and horizontal bulge when sad
   const sadFactor = Math.max(0, -bot.mood);
   const scaleX = totalScale * (1 + 0.05 * sadFactor);
   const scaleY = totalScale * (1 - 0.08 * sadFactor);
@@ -146,7 +198,7 @@ export function drawBot(
   ctx.translate(drawX, drawY);
   ctx.scale(scaleX, scaleY);
 
-  // 1. Radial Halo at 1.7 * r, alpha 0.18 -> 0.48 with mood
+  // 1. Radial Halo
   const haloR = bot.r * 1.7;
   const haloAlpha = Math.max(0.18, Math.min(0.48, 0.33 + 0.15 * bot.mood));
   const grad = ctx.createRadialGradient(0, 0, bot.r * 0.8, 0, 0, haloR);
@@ -157,7 +209,7 @@ export function drawBot(
   ctx.arc(0, 0, haloR, 0, Math.PI * 2);
   ctx.fill();
 
-  // 2. Antenna: 14px line + 3px dot, angle -0.55 * mood radians
+  // 2. Antenna
   const antennaAngle = -0.55 * bot.mood;
   const antennaLen = 14;
   const antennaStartX = 0;
@@ -172,13 +224,12 @@ export function drawBot(
   ctx.lineTo(antennaEndX, antennaEndY);
   ctx.stroke();
 
-  // Antenna tip dot (3px radius)
   ctx.fillStyle = bot.color;
   ctx.beginPath();
   ctx.arc(antennaEndX, antennaEndY, 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3. Rounded-rect body: r=22 (width=44, height=44), corner radius = 8
+  // 3. Rounded-rect body
   const w = bot.r * 2;
   const h = bot.r * 2;
   const radius = 8;
@@ -187,7 +238,7 @@ export function drawBot(
   ctx.roundRect(-bot.r, -bot.r, w, h, radius);
   ctx.fill();
 
-  // 4. Eyes: two eye dots offset toward the cursor (clamped ±4px)
+  // 4. Eyes
   let eyeOffsetX = 0;
   let eyeOffsetY = 0;
   if (!lookAtCamera && (cursor.x !== 0 || cursor.y !== 0)) {
@@ -200,17 +251,14 @@ export function drawBot(
     }
   }
 
-  // Eye spacing: ±7px from center, 2px above center
   ctx.fillStyle = "#0B0D10";
   const eyeR = 2.5;
   const eyeBaseY = -2;
 
-  // Left eye
   ctx.beginPath();
   ctx.arc(-7 + eyeOffsetX, eyeBaseY + eyeOffsetY, eyeR, 0, Math.PI * 2);
   ctx.fill();
 
-  // Right eye
   ctx.beginPath();
   ctx.arc(7 + eyeOffsetX, eyeBaseY + eyeOffsetY, eyeR, 0, Math.PI * 2);
   ctx.fill();

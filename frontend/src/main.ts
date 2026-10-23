@@ -1,12 +1,13 @@
 import "./styles.css";
 import { createAllBots, Bot } from "./bots/Bot";
-import { drawBot, drawCrown, drawSpeech } from "./bots/render";
+import { drawBot, drawCrown, drawSpeech, drawNerdTag } from "./bots/render";
 import { updateSteering, Rect } from "./bots/steering";
 import { createRenderLoop } from "./bots/loop";
 import { setupInputBar, InputBarController } from "./ui/input";
 import { decide, DecideResponse } from "./api";
 import { showToast } from "./ui/toast";
 import { easeOutCubic, lerp } from "./lib/ease";
+import { setupNerdMode, NerdController } from "./ui/nerd";
 
 export type AppState = "IDLE" | "THINKING" | "REVEALING" | "SETTLED";
 
@@ -18,6 +19,8 @@ const questionInput = document.getElementById("question-input") as HTMLInputElem
 const charCounter = document.getElementById("char-counter") as HTMLElement;
 const inputHint = document.getElementById("input-hint") as HTMLElement;
 const a11yResult = document.getElementById("a11y-result") as HTMLElement;
+const nerdToggle = document.getElementById("nerd-toggle") as HTMLButtonElement | null;
+const nerdPanel = document.getElementById("nerd-panel") as HTMLElement | null;
 
 let appState: AppState = "IDLE";
 let currentResult: DecideResponse | null = null;
@@ -25,6 +28,7 @@ let revealStartTime = 0;
 const startScales: number[] = [1, 1, 1, 1];
 const startPs: number[] = [0.25, 0.25, 0.25, 0.25];
 let coinFlipTopPair: [number, number] | null = null;
+let isNerdActive = false;
 
 const cursor = { x: 0, y: 0 };
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -42,6 +46,10 @@ window.addEventListener("pointermove", (e) => {
 let bots: Bot[] = createAllBots(window.innerWidth, window.innerHeight);
 let inputBarRect: Rect | null = null;
 let lastWinnerPos: { x: number; y: number } | null = null;
+
+export const nerdController: NerdController = setupNerdMode(nerdToggle, nerdPanel, (active) => {
+  isNerdActive = active;
+});
 
 function updateInputRect(): void {
   if (inputContainer) {
@@ -87,7 +95,6 @@ function handleStateUpdate(now: number): void {
       b.revealScale = lerp(startScales[i], b.targetScale, eased);
     }
 
-    // Coin-flip bump animation: top two bots bump twice between 150ms and 550ms
     if (currentResult?.coinFlip && coinFlipTopPair && !reducedMotion) {
       const [idxA, idxB] = coinFlipTopPair;
       const botA = bots[idxA];
@@ -164,7 +171,7 @@ export const renderLoop = createRenderLoop(canvas, {
     const elapsed = (appState === "REVEALING" || appState === "SETTLED") ? now - revealStartTime : 0;
     const isCoinFlip = currentResult?.coinFlip ?? false;
 
-    // Draw bots
+    // 1. Draw bots
     for (let i = 0; i < bots.length; i++) {
       const b = bots[i];
       const isTopCoinPair = isCoinFlip && coinFlipTopPair && (i === coinFlipTopPair[0] || i === coinFlipTopPair[1]);
@@ -173,7 +180,14 @@ export const renderLoop = createRenderLoop(canvas, {
       drawBot(ctx, b, now, cursor, reducedMotion, lookAtCamera);
     }
 
-    // Draw crowns & speech bubbles
+    // 2. Draw nerd tags (AFTER drawBot)
+    if (isNerdActive) {
+      for (let i = 0; i < bots.length; i++) {
+        drawNerdTag(ctx, bots[i], dims.width);
+      }
+    }
+
+    // 3. Draw crowns & speech bubbles
     if (appState === "REVEALING" || appState === "SETTLED") {
       for (let i = 0; i < bots.length; i++) {
         const b = bots[i];
@@ -210,7 +224,6 @@ export async function onUserSubmit(question: string): Promise<void> {
   revealStartTime = performance.now();
   appState = "REVEALING";
 
-  // Identify top two bots for coin-flip near-tie
   const sortedIndices = res.data.options
     .map((o, idx) => ({ idx, p: o.p }))
     .sort((a, b) => b.p - a.p)
@@ -230,6 +243,15 @@ export async function onUserSubmit(question: string): Promise<void> {
     b.targetScale = 0.6 + opt.p;
     b.chosen = res.data.chosenId === b.id;
   }
+
+  // Update nerd panel
+  nerdController.updatePanel({
+    state: res.data.state,
+    chosenSlot: res.data.options[res.data.chosenId]?.slot,
+    marginPercent: res.data.margin,
+    isCoinFlip: res.data.coinFlip,
+    timings: res.data.timings,
+  });
 }
 
 export let inputController: InputBarController | null = null;
