@@ -8,6 +8,7 @@ export interface MammothResult {
 }
 
 const UNIFORM_P = [0.25, 0.25, 0.25, 0.25];
+const SLOTS = ["no", "yes", "jester", "prophet"] as const;
 
 /**
  * VENDOR FIREWALL.
@@ -46,24 +47,31 @@ export function extractProbabilities(
       }
     }
 
-    // Case C: result array or object with probabilities map { [label]: score }
+    // Case C: OpenRouter decisions or Baseten dictionary format
     if (rawProbs.length === 0) {
       const probMap =
-        json.result?.[0]?.probabilities ||
+        json.answers?.verdict?.probabilities ||
         json.answers?.[0]?.probabilities ||
+        json.result?.[0]?.probabilities ||
         json.output?.probabilities ||
         json.probabilities;
 
       if (probMap && typeof probMap === "object" && !Array.isArray(probMap)) {
-        for (const opt of options) {
-          const val = probMap[opt.label] ?? probMap[opt.label.toLowerCase()];
+        for (let i = 0; i < 4; i++) {
+          const slot = SLOTS[i];
+          const opt = options[i];
+          // Try slot key first ("no", "yes", "jester", "prophet"), then option label
+          const val =
+            probMap[slot] ??
+            probMap[String(i)] ??
+            (opt ? (probMap[opt.label] ?? probMap[opt.label.toLowerCase()]) : undefined);
+
           const num = typeof val === "number" ? val : parseFloat(val);
           rawProbs.push(isNaN(num) ? 0.25 : Math.max(0, num));
         }
       }
     }
 
-    // Validation: must have 4 non-NaN values
     if (rawProbs.length !== 4 || rawProbs.some((v) => isNaN(v))) {
       return { p: [...UNIFORM_P], chosenIndex: 0, ok: false };
     }
@@ -73,10 +81,8 @@ export function extractProbabilities(
       return { p: [...UNIFORM_P], chosenIndex: 0, ok: false };
     }
 
-    // Normalize probabilities to sum to ~1.0
     const normalized = rawProbs.map((v) => Number((v / sum).toFixed(4)));
 
-    // Pick argmax for chosenIndex
     let maxIdx = 0;
     let maxVal = -Infinity;
     for (let i = 0; i < normalized.length; i++) {
@@ -95,7 +101,8 @@ export function extractProbabilities(
 export async function scoreOptions(
   apiKey: string | undefined,
   state: string,
-  options: GroqOption[]
+  options: GroqOption[],
+  modelName?: string
 ): Promise<MammothResult> {
   const startTime = Date.now();
 
@@ -108,24 +115,48 @@ export async function scoreOptions(
     };
   }
 
-  const body = {
-    model: "decision-models/baseten-mammoth-27b-latest",
-    state,
-    questions: [
-      {
-        key: "verdict",
-        type: "choice",
-        text: "How should this be answered?",
-        options: options.map((o) => ({
-          label: o.label,
-          description: o.description,
-        })),
-      },
-    ],
-  };
+  const isOpenRouter = apiKey.startsWith("sk-or-");
+  const endpoint = isOpenRouter
+    ? "https://openrouter.ai/api/alpha/decisions"
+    : "https://inference.baseten.co/v1/decision";
+
+  const model = modelName || (isOpenRouter ? "baseten/mammoth-1:free" : "decision-models/baseten-mammoth-27b-latest");
+
+  const body = isOpenRouter
+    ? {
+        model,
+        state,
+        questions: {
+          verdict: {
+            type: "choice",
+            instructions: "How should this be answered?",
+            criteria: {
+              no: options[0]?.description || options[0]?.label || "Refusal",
+              yes: options[1]?.description || options[1]?.label || "Endorsement",
+              jester: options[2]?.description || options[2]?.label || "Absurdity",
+              prophet: options[3]?.description || options[3]?.label || "Ominous agreement",
+            },
+          },
+        },
+      }
+    : {
+        model,
+        state,
+        questions: [
+          {
+            key: "verdict",
+            type: "choice",
+            text: "How should this be answered?",
+            options: options.map((o) => ({
+              label: o.label,
+              description: o.description,
+            })),
+          },
+        ],
+      };
 
   try {
-    const res = await fetch("https://inference.baseten.co/v1/decision", {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

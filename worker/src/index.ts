@@ -6,7 +6,10 @@ import { getCachedDecide, setCachedDecide, checkRateLimit } from "./cache";
 
 export interface Env {
   GROQ_API_KEY?: string;
+  GROQ_MODEL?: string;
   BASETEN_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+  MAMMOTH_MODEL?: string;
   MAMMOTH_KV?: KVNamespace;
 }
 
@@ -79,8 +82,11 @@ export default {
       let options: [GroqOption, GroqOption, GroqOption, GroqOption];
       let groqTiming = 0;
 
-      if (env.GROQ_API_KEY) {
-        const groqResult = await callGroqWithRetry(env.GROQ_API_KEY, validation.normalized);
+      const groqKey = env.GROQ_API_KEY;
+      const groqModel = env.GROQ_MODEL;
+
+      if (groqKey) {
+        const groqResult = await callGroqWithRetry(groqKey, validation.normalized, groqModel);
         if (!groqResult) {
           return errorResponse("UPSTREAM", "The robots were unable to formulate decisions.", 502);
         }
@@ -98,7 +104,9 @@ export default {
       }
 
       // Mammoth-1 decision model scoring via vendor firewall
-      const mammothResult = await scoreOptions(env.BASETEN_API_KEY, state, options);
+      const mammothKey = env.BASETEN_API_KEY || env.OPENROUTER_API_KEY;
+      const mammothModel = env.MAMMOTH_MODEL;
+      const mammothResult = await scoreOptions(mammothKey, state, options, mammothModel);
 
       const decideResponse: DecideResponse = buildDecideResponse({
         id: hash,

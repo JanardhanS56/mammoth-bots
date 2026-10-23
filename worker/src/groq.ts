@@ -54,9 +54,10 @@ export function validateGroqPayload(parsed: any): {
   };
 }
 
-async function executeGroqRequest(apiKey: string, question: string): Promise<any> {
+async function executeGroqRequest(apiKey: string, question: string, modelName?: string): Promise<any> {
+  const model = modelName || "llama-3.3-70b-versatile";
   const body = {
-    model: "llama-3.3-70b-versatile",
+    model,
     temperature: 0.95,
     response_format: { type: "json_object" },
     messages: [
@@ -87,12 +88,12 @@ async function executeGroqRequest(apiKey: string, question: string): Promise<any
   return JSON.parse(content);
 }
 
-export async function callGroqWithRetry(apiKey: string, question: string): Promise<GroqResponse | null> {
+export async function callGroqWithRetry(apiKey: string, question: string, modelName?: string): Promise<GroqResponse | null> {
   const startTime = Date.now();
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const parsed = await executeGroqRequest(apiKey, question);
+      const parsed = await executeGroqRequest(apiKey, question, modelName);
       const validation = validateGroqPayload(parsed);
       if (validation.valid && validation.options) {
         return {
