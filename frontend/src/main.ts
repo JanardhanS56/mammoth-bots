@@ -1,4 +1,6 @@
 import "./styles.css";
+import { createAllBots } from "./bots/Bot";
+import { drawBot } from "./bots/render";
 
 const canvas = document.getElementById("bots-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -6,6 +8,21 @@ const ctx = canvas.getContext("2d")!;
 let dpr = 1;
 let width = window.innerWidth;
 let height = window.innerHeight;
+
+const cursor = { x: 0, y: 0 };
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+let reducedMotion = reducedMotionQuery.matches;
+
+reducedMotionQuery.addEventListener("change", (e) => {
+  reducedMotion = e.matches;
+});
+
+window.addEventListener("pointermove", (e) => {
+  cursor.x = e.clientX;
+  cursor.y = e.clientY;
+});
+
+let bots = createAllBots(width, height);
 
 export function resizeCanvas(): void {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -45,12 +62,16 @@ let lastTime = 0;
 let rafId = 0;
 
 function frame(now: number): void {
-  // Clamp dt to 32ms to survive tab-switch spikes
   const dt = Math.min(32, now - lastTime);
   lastTime = now;
   void dt;
 
+  ctx.clearRect(0, 0, width, height);
   drawGrid(ctx, width, height);
+
+  for (let i = 0; i < bots.length; i++) {
+    drawBot(ctx, bots[i], now, cursor, reducedMotion);
+  }
 
   rafId = requestAnimationFrame(frame);
 }
@@ -71,7 +92,13 @@ function stopLoop(): void {
 
 window.addEventListener("resize", () => {
   resizeCanvas();
-  drawGrid(ctx, width, height);
+  // Adjust bot positions to remain proportional
+  const spacing = width / 5;
+  const centerY = height * 0.4;
+  for (let i = 0; i < bots.length; i++) {
+    bots[i].x = spacing * (i + 1);
+    bots[i].y = centerY;
+  }
 });
 
 document.addEventListener("visibilitychange", () => {
