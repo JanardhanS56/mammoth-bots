@@ -51,3 +51,8 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Ease-Out Cubic Lerp**: Scales bots smoothly over 600ms according to target formula `targetScale = 0.6 + p` (0.6× for p=0 to 1.6× for p=1), ensuring the winner is visibly largest.
 - **Session Caching**: Wrapped API calls with client `sessionStorage` cache under key `mammoth-cache-v1` with immediate instant recall for identical questions.
 - **Accessibility Mirroring**: Mirrored verdict and probability into `#a11y-result` with `aria-live="polite"`.
+
+## M8: Crowns, Speech Bubbles, and Coin-Flip Bumps
+- **Winner's Crown Animation**: Implemented 3-point gold crown popping at t=200ms with scale overshoot curve (`0 → 1.15 → 1.0` over 300ms) sitting directly atop the winner bot.
+- **Microcopy-Driven Speech Bubbles**: Bubbles pop in at t=600ms; winner says its option label (or `"ha."` on winning streaks ≥ 2); losers react with `"…"`, `"hmph."`, or `"why do I even"` based on streak depth.
+- **Coin-Flip Near-Tie Behavior**: When `margin < 0.05` (`coinFlip: true`), crown is strictly suppressed; top two bots physically bump twice into each other between 150ms and 550ms, then break contact and stare straight into the camera (eye offsets = 0, 0).

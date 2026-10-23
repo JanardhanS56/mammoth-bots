@@ -1,6 +1,6 @@
 import "./styles.css";
 import { createAllBots, Bot } from "./bots/Bot";
-import { drawBot } from "./bots/render";
+import { drawBot, drawCrown, drawSpeech } from "./bots/render";
 import { updateSteering, Rect } from "./bots/steering";
 import { createRenderLoop } from "./bots/loop";
 import { setupInputBar, InputBarController } from "./ui/input";
@@ -24,6 +24,7 @@ let currentResult: DecideResponse | null = null;
 let revealStartTime = 0;
 const startScales: number[] = [1, 1, 1, 1];
 const startPs: number[] = [0.25, 0.25, 0.25, 0.25];
+let coinFlipTopPair: [number, number] | null = null;
 
 const cursor = { x: 0, y: 0 };
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -86,6 +87,27 @@ function handleStateUpdate(now: number): void {
       b.revealScale = lerp(startScales[i], b.targetScale, eased);
     }
 
+    // Coin-flip bump animation: top two bots bump twice between 150ms and 550ms
+    if (currentResult?.coinFlip && coinFlipTopPair && !reducedMotion) {
+      const [idxA, idxB] = coinFlipTopPair;
+      const botA = bots[idxA];
+      const botB = bots[idxB];
+      if (elapsed >= 150 && elapsed <= 550) {
+        const bumpPhase = (elapsed - 150) / 400;
+        const bumpDisp = Math.sin(bumpPhase * Math.PI * 4) * 14;
+        const dx = botB.x - botA.x;
+        const dy = botB.y - botA.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        botA.x += nx * (bumpDisp * 0.05);
+        botA.y += ny * (bumpDisp * 0.05);
+        botB.x -= nx * (bumpDisp * 0.05);
+        botB.y -= ny * (bumpDisp * 0.05);
+      }
+    }
+
     if (elapsed >= 600 || reducedMotion) {
       appState = "SETTLED";
       if (currentResult) {
@@ -101,7 +123,6 @@ function handleStateUpdate(now: number): void {
   } else if (appState === "SETTLED") {
     const elapsed = now - revealStartTime;
     if (elapsed >= 1400) {
-      // 600ms reveal + 800ms settled
       appState = "IDLE";
       inputController?.setDisabled(false);
     }
@@ -140,8 +161,25 @@ export const renderLoop = createRenderLoop(canvas, {
     ctx.clearRect(0, 0, dims.width, dims.height);
     drawGrid(ctx, dims.width, dims.height);
 
+    const elapsed = (appState === "REVEALING" || appState === "SETTLED") ? now - revealStartTime : 0;
+    const isCoinFlip = currentResult?.coinFlip ?? false;
+
+    // Draw bots
     for (let i = 0; i < bots.length; i++) {
-      drawBot(ctx, bots[i], now, cursor, reducedMotion);
+      const b = bots[i];
+      const isTopCoinPair = isCoinFlip && coinFlipTopPair && (i === coinFlipTopPair[0] || i === coinFlipTopPair[1]);
+      const lookAtCamera = Boolean(isTopCoinPair && elapsed >= 550);
+
+      drawBot(ctx, b, now, cursor, reducedMotion, lookAtCamera);
+    }
+
+    // Draw crowns & speech bubbles
+    if (appState === "REVEALING" || appState === "SETTLED") {
+      for (let i = 0; i < bots.length; i++) {
+        const b = bots[i];
+        drawCrown(ctx, b, elapsed, isCoinFlip);
+        drawSpeech(ctx, b, elapsed);
+      }
     }
   },
 });
@@ -171,6 +209,13 @@ export async function onUserSubmit(question: string): Promise<void> {
   currentResult = res.data;
   revealStartTime = performance.now();
   appState = "REVEALING";
+
+  // Identify top two bots for coin-flip near-tie
+  const sortedIndices = res.data.options
+    .map((o, idx) => ({ idx, p: o.p }))
+    .sort((a, b) => b.p - a.p)
+    .map((item) => item.idx);
+  coinFlipTopPair = [sortedIndices[0], sortedIndices[1]];
 
   for (let i = 0; i < bots.length; i++) {
     const b = bots[i];

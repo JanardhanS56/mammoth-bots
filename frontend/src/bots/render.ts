@@ -6,12 +6,125 @@ export interface CursorState {
   y: number;
 }
 
+export function drawCrown(
+  ctx: CanvasRenderingContext2D,
+  bot: Bot,
+  elapsed: number,
+  coinFlip: boolean
+): void {
+  if (coinFlip || !bot.chosen || elapsed < 200) return;
+
+  const progress = Math.min(1, (elapsed - 200) / 300);
+  // Overshoot 0 -> 1.15 -> 1.0
+  let scale = 1;
+  if (progress < 0.7) {
+    scale = (progress / 0.7) * 1.15;
+  } else {
+    scale = 1.15 - ((progress - 0.7) / 0.3) * 0.15;
+  }
+
+  const crownY = bot.y - bot.r * bot.revealScale - 26;
+
+  ctx.save();
+  ctx.translate(bot.x, crownY);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = "#FBBF24";
+  ctx.strokeStyle = "#D97706";
+  ctx.lineWidth = 1.5;
+
+  // 3-point crown
+  ctx.beginPath();
+  ctx.moveTo(-12, 4);
+  ctx.lineTo(-14, -8);
+  ctx.lineTo(-5, -2);
+  ctx.lineTo(0, -12);
+  ctx.lineTo(5, -2);
+  ctx.lineTo(14, -8);
+  ctx.lineTo(12, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Little jewels at points
+  ctx.fillStyle = "#FFF";
+  ctx.beginPath();
+  ctx.arc(-14, -8, 1.5, 0, Math.PI * 2);
+  ctx.arc(0, -12, 1.5, 0, Math.PI * 2);
+  ctx.arc(14, -8, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+export function getBotSpeechCopy(bot: Bot): string {
+  if (bot.chosen) {
+    return bot.streak >= 2 ? "ha." : bot.label || "yes.";
+  }
+  if (bot.streak <= -3) return "why do I even";
+  if (bot.streak <= -2) return "hmph.";
+  return "…";
+}
+
+export function drawSpeech(
+  ctx: CanvasRenderingContext2D,
+  bot: Bot,
+  elapsed: number
+): void {
+  if (elapsed < 600) return;
+
+  const bubbleProgress = Math.min(1, (elapsed - 600) / 200);
+  const text = getBotSpeechCopy(bot);
+  if (!text) return;
+
+  ctx.save();
+  ctx.font = bot.chosen ? "bold 13px ui-sans-serif, system-ui, sans-serif" : "12px ui-sans-serif, system-ui, sans-serif";
+  const textMetrics = ctx.measureText(text);
+  const paddingX = 10;
+  const paddingY = 6;
+  const bubbleWidth = textMetrics.width + paddingX * 2;
+  const bubbleHeight = 24;
+
+  const bubbleX = bot.x;
+  const bubbleY = bot.y - bot.r * bot.revealScale - (bot.chosen ? 46 : 38);
+
+  ctx.translate(bubbleX, bubbleY);
+  ctx.scale(bubbleProgress, bubbleProgress);
+
+  // Bubble background
+  ctx.fillStyle = "rgba(20, 24, 29, 0.92)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.roundRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(-4, bubbleHeight / 2);
+  ctx.lineTo(0, bubbleHeight / 2 + 5);
+  ctx.lineTo(4, bubbleHeight / 2);
+  ctx.fillStyle = "rgba(20, 24, 29, 0.92)";
+  ctx.fill();
+
+  // Text
+  ctx.fillStyle = "#E8ECF1";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 0, 1);
+
+  ctx.restore();
+}
+
 export function drawBot(
   ctx: CanvasRenderingContext2D,
   bot: Bot,
   t: number,
   cursor: CursorState,
-  reducedMotion: boolean = false
+  reducedMotion: boolean = false,
+  lookAtCamera: boolean = false
 ): void {
   // Bob motion: period 2400ms, amplitude (3 + 2 * mood)
   const bobAmp = reducedMotion ? 0 : 3 + 2 * bot.mood;
@@ -77,7 +190,7 @@ export function drawBot(
   // 4. Eyes: two eye dots offset toward the cursor (clamped ±4px)
   let eyeOffsetX = 0;
   let eyeOffsetY = 0;
-  if (cursor.x !== 0 || cursor.y !== 0) {
+  if (!lookAtCamera && (cursor.x !== 0 || cursor.y !== 0)) {
     const dx = cursor.x - drawX;
     const dy = cursor.y - drawY;
     const dist = Math.hypot(dx, dy);
