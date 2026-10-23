@@ -1,9 +1,11 @@
 import "./styles.css";
 import { createAllBots } from "./bots/Bot";
 import { drawBot } from "./bots/render";
+import { updateSteering, Rect } from "./bots/steering";
 
 const canvas = document.getElementById("bots-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
+const inputContainer = document.getElementById("input-container") as HTMLElement;
 
 let dpr = 1;
 let width = window.innerWidth;
@@ -23,6 +25,20 @@ window.addEventListener("pointermove", (e) => {
 });
 
 let bots = createAllBots(width, height);
+let inputBarRect: Rect | null = null;
+const lastWinnerPos: { x: number; y: number } | null = null;
+
+function updateInputRect(): void {
+  if (inputContainer) {
+    const rect = inputContainer.getBoundingClientRect();
+    inputBarRect = {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    };
+  }
+}
 
 export function resizeCanvas(): void {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -36,6 +52,7 @@ export function resizeCanvas(): void {
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
+  updateInputRect();
 }
 
 export function drawGrid(context: CanvasRenderingContext2D, w: number, h: number): void {
@@ -64,7 +81,17 @@ let rafId = 0;
 function frame(now: number): void {
   const dt = Math.min(32, now - lastTime);
   lastTime = now;
-  void dt;
+
+  updateSteering(bots, {
+    dt,
+    width,
+    height,
+    inputBarRect,
+    cursor,
+    lastWinnerPos,
+    freezeWander: false,
+    reducedMotion,
+  });
 
   ctx.clearRect(0, 0, width, height);
   drawGrid(ctx, width, height);
@@ -92,13 +119,6 @@ function stopLoop(): void {
 
 window.addEventListener("resize", () => {
   resizeCanvas();
-  // Adjust bot positions to remain proportional
-  const spacing = width / 5;
-  const centerY = height * 0.4;
-  for (let i = 0; i < bots.length; i++) {
-    bots[i].x = spacing * (i + 1);
-    bots[i].y = centerY;
-  }
 });
 
 document.addEventListener("visibilitychange", () => {
