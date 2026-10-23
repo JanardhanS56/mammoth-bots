@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Mammoth Bots</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="bots-canvas"></canvas>
+
+    <header class="top-bar">
+      <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">forget everything</button>
+      <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?]</button>
+    </header>
+
+    <div id="nerd-panel" class="nerd-panel" aria-hidden="true"></div>
+
+    <main class="input-container" id="input-container">
+      <form id="question-form" class="input-form">
+        <label for="question-input" class="sr-only">Ask the robots a question</label>
+        <input
+          type="text"
+          id="question-input"
+          class="question-input"
+          placeholder="ask the robots something…"
+          maxlength="100"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="input-meta">
+          <span id="char-counter" class="char-counter">0</span>
+        </div>
+      </form>
+      <div id="input-hint" class="input-hint" aria-live="polite"></div>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+    <div id="a11y-result" class="sr-only" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
