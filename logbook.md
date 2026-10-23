@@ -83,3 +83,10 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Bundle Optimization**: Built static bundle with Vite and TypeScript producing only 16.90 KB uncompressed (7.01 KB gzipped) client JavaScript, well below the 30 KB budget limit.
 - **Zero-Secret Bundle Verification**: Verified `dist/` directory with automated pattern scanning (`grep -r "GROQ_API_KEY\|BASETEN_API_KEY" frontend/dist/`), confirming `clean` output with 0 leaked tokens.
 - **Cloudflare Target Preparation**: Configured `wrangler.toml` for Cloudflare Workers API backend and Pages static hosting with KV namespace bindings.
+
+## M13: OpenRouter Decisions API & Live Integration Verification
+- **OpenRouter Mammoth-1 Vendor Firewall**: Integrated OpenRouter Decisions API (`POST https://openrouter.ai/api/alpha/decisions`) supporting `baseten/mammoth-1:free` model with typed slot criteria (`no`, `yes`, `jester`, `prophet`).
+- **Groq Dynamic Model Binding**: Supported `openai/gpt-oss-120b` and `llama-3.3-70b-versatile` through `GROQ_MODEL` environment configuration.
+- **Vite Dev Worker Bridge**: Connected Vite dev server (`http://localhost:5173/api/decide`) directly to the Cloudflare Worker runtime logic using local `.env` variables for seamless local testing without secret leakage.
+- **Live End-to-End Validation**: Verified live API decision and browser animation (`Should I adopt a robot?`), verifying argmax winner, crown animation, speech bubble, and amnesia reset.
+
