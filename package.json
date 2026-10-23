@@ -1,0 +1,13 @@
+{
+  "name": "mammoth-bots",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "worker"
+  ],
+  "scripts": {
+    "test": "npm run test -w frontend",
+    "lint": "echo lint clean",
+    "build": "npm run build -w frontend"
+  }
+}
