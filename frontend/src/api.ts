@@ -23,6 +23,7 @@ export interface DecideResponse {
 export interface ApiError {
   code: "BAD_INPUT" | "UPSTREAM" | "RATE_LIMIT" | "NETWORK";
   message: string;
+  retryAfter?: number;
 }
 
 const CACHE_KEY = "mammoth-cache-v1";
@@ -64,24 +65,36 @@ export async function decide(
     };
   }
 
+  // Safe timeout safeguard: abort after 14s so bots never lock in THINKING state indefinitely
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 14000);
+
   try {
     const url = `${apiBase}/api/decide`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       let code: ApiError["code"] = "UPSTREAM";
       let message = "the robots forgot how to decide";
+
+      const retryAfterHeader = res.headers?.get ? res.headers.get("Retry-After") : null;
+      const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
 
       if (res.status === 400) {
         code = "BAD_INPUT";
         message = "that's a lot of words";
       } else if (res.status === 429) {
         code = "RATE_LIMIT";
-        message = "the robots need a break";
+        message = retryAfter
+          ? `Usage limit reached (10/hr). Please wait ${retryAfter}s.`
+          : "the robots need a break";
       }
 
       try {
@@ -96,13 +109,20 @@ export async function decide(
         // use status defaults
       }
 
-      return { ok: false, error: { code, message } };
+      return { ok: false, error: { code, message, retryAfter } };
     }
 
     const data: DecideResponse = await res.json();
     setSessionCache(normalized, data);
     return { ok: true, data };
   } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === "AbortError") {
+      return {
+        ok: false,
+        error: { code: "UPSTREAM", message: "Deliberation timed out. Please try again." },
+      };
+    }
     return {
       ok: false,
       error: {

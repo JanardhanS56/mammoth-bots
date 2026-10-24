@@ -588,9 +588,20 @@ export const renderLoop = createRenderLoop(canvas, {
   },
 });
 
+let lastSubmitTimestamp = 0;
+
 export async function onUserSubmit(question: string): Promise<void> {
+  const now = Date.now();
   if (appState !== "IDLE") return;
 
+  // Client-side debounce to prevent accidental double-clicks or rapid bursts
+  if (now - lastSubmitTimestamp < 2500) {
+    inputController?.shake();
+    inputController?.showHint("wait a moment…", 1500);
+    return;
+  }
+
+  lastSubmitTimestamp = now;
   appState = "THINKING";
   roundRecorded = false;
   inputController?.setDisabled(true);
@@ -606,9 +617,10 @@ export async function onUserSubmit(question: string): Promise<void> {
       inputController?.shake();
       inputController?.showHint("that's a lot of words");
     } else if (res.error.code === "RATE_LIMIT") {
-      showToast("the robots need a break");
+      showToast(res.error.message, 4500);
+      inputController?.showHint(res.error.message, 4500);
     } else {
-      showToast("the robots forgot how to decide");
+      showToast(res.error.message || "the robots forgot how to decide", 3000);
     }
     return;
   }

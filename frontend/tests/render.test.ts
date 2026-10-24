@@ -11,22 +11,22 @@ describe("bots/render speech copy and crowns", () => {
     expect(getBotSpeechCopy(winner)).toBe("Fly away");
 
     winner.streak = 2;
-    expect(getBotSpeechCopy(winner)).toBe("ha.");
+    expect(getBotSpeechCopy(winner)).toBe("predictable trend.");
 
     const loser = createBot(0, 100, 100);
     loser.chosen = false;
 
     loser.streak = -1;
-    expect(getBotSpeechCopy(loser)).toBe("…");
+    expect(getBotSpeechCopy(loser)).toBe("wait, what?");
 
     loser.streak = -2;
-    expect(getBotSpeechCopy(loser)).toBe("hmph.");
+    expect(getBotSpeechCopy(loser)).toBe("rigged.");
 
     loser.streak = -3;
-    expect(getBotSpeechCopy(loser)).toBe("why do I even");
+    expect(getBotSpeechCopy(loser)).toBe("absolute nonsense.");
 
     loser.streak = -5;
-    expect(getBotSpeechCopy(loser)).toBe("why do I even");
+    expect(getBotSpeechCopy(loser)).toBe("absolute nonsense.");
   });
 
   it("suppresses crown when coinFlip is true", () => {

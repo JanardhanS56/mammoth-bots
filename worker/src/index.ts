@@ -19,22 +19,35 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export function jsonResponse(data: unknown, status = 200): Response {
+export function jsonResponse(
+  data: unknown,
+  status = 200,
+  extraHeaders: Record<string, string> = {}
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...CORS_HEADERS,
+      ...extraHeaders,
     },
   });
 }
 
-export function errorResponse(code: "BAD_INPUT" | "UPSTREAM" | "RATE_LIMIT", message: string, status = 400): Response {
+export function errorResponse(
+  code: "BAD_INPUT" | "UPSTREAM" | "RATE_LIMIT",
+  message: string,
+  status = 400,
+  extraHeaders: Record<string, string> = {}
+): Response {
+  // Never leak secrets, API keys, or raw tokens in error responses
+  const sanitizedMessage = message.replace(/(key|token|bearer)[=:\s]+[a-zA-Z0-9_\-\.]{8,}/gi, "$1=[REDACTED]");
   return jsonResponse(
     {
-      error: { code, message },
+      error: { code, message: sanitizedMessage },
     },
-    status
+    status,
+    extraHeaders
   );
 }
 
@@ -50,12 +63,24 @@ export default {
     }
 
     if (url.pathname === "/api/decide" && request.method === "POST") {
-      const clientIp = request.headers.get("cf-connecting-ip") || "127.0.0.1";
+      const clientIp = request.headers.get("cf-connecting-ip")
+        || request.headers.get("x-real-ip")
+        || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || "127.0.0.1";
 
-      // Rate limit check: 10 requests / hour per IP
+      // Rate limit check: 10 requests / hour per IP (KV or In-Memory fallback)
       const rateLimit = await checkRateLimit(env.MAMMOTH_KV, clientIp);
       if (!rateLimit.allowed) {
-        return errorResponse("RATE_LIMIT", "the robots need a break", 429);
+        return errorResponse(
+          "RATE_LIMIT",
+          `Usage limit reached (10 requests/hour). Please retry in ${rateLimit.retryAfterSeconds}s.`,
+          429,
+          {
+            "Retry-After": String(rateLimit.retryAfterSeconds),
+            "RateLimit-Limit": "10",
+            "RateLimit-Remaining": "0",
+          }
+        );
       }
 
       let body: any;
