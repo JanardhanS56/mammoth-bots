@@ -160,7 +160,7 @@ html, body {
   color: #ffffff;
 }
 
-/* Nerd Mode Telemetry Panel */
+/* Diagnostic Telemetry Panel */
 .nerd-panel {
   position: fixed;
   bottom: 24px;
@@ -173,11 +173,11 @@ html, body {
   color: var(--text-muted);
   background: #ffffff;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 12px 16px;
   max-width: 320px;
   display: none;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 3px 3px 0px var(--border);
 }
 
 .nerd-panel.active {

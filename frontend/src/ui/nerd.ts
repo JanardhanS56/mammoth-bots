@@ -95,24 +95,24 @@ export function setupNerdMode(
     updatePanel: (content) => {
       if (!panelEl) return;
       if (!content) {
-        panelEl.innerHTML = `<div class="title">NERD PANEL</div><div>Awaiting verdict...</div>`;
+        panelEl.innerHTML = `<div class="title">TELEMETRY // STANDBY</div><div>Awaiting deliberation stream...</div>`;
         return;
       }
 
       const marginStr = content.marginPercent !== undefined ? `${Math.round(content.marginPercent * 100)}%` : "--";
-      let html = `<div class="title">NERD METRICS</div>`;
+      let html = `<div class="title">TELEMETRY // QUAD-DECISION</div>`;
       if (content.state) {
         html += `<div><strong>State:</strong> ${escapeHtml(content.state)}</div>`;
       }
       if (content.chosenSlot) {
-        html += `<div><strong>Chosen:</strong> ${escapeHtml(content.chosenSlot)}</div>`;
+        html += `<div><strong>Selected:</strong> ${escapeHtml(content.chosenSlot)}</div>`;
       }
-      html += `<div><strong>Margin:</strong> ${marginStr}</div>`;
+      html += `<div><strong>Confidence Margin:</strong> ${marginStr}</div>`;
       if (content.isCoinFlip) {
-        html += `<div class="coin-flip-warn">⚠ coin flip</div>`;
+        html += `<div class="coin-flip-warn">▲ Contested Decision (&lt;5% margin)</div>`;
       }
       if (content.timings) {
-        html += `<div style="opacity:0.6; margin-top:4px;">Groq: ${content.timings.groq}ms · Mammoth: ${content.timings.mammoth}ms</div>`;
+        html += `<div style="opacity:0.65; margin-top:6px; font-size:10px;">LLM: ${content.timings.groq}ms · Baseten: ${content.timings.mammoth}ms</div>`;
       }
       panelEl.innerHTML = html;
     },
