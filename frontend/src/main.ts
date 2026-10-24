@@ -225,16 +225,63 @@ export function drawGrid(context: CanvasRenderingContext2D, w: number, h: number
   context.fillStyle = "#FFFFFF";
   context.fillRect(0, 0, w, h);
 
-  // Subtle clean micro-dot grid
-  context.fillStyle = "#E4E4E7";
+  // Architectural micro-grid with coordinate crosshairs
   const spacing = 28;
+  const majorInterval = 4 * spacing; // every 112px
+
+  context.fillStyle = "#E4E4E7";
   for (let x = spacing; x < w; x += spacing) {
     for (let y = spacing; y < h; y += spacing) {
-      context.beginPath();
-      context.arc(x, y, 1, 0, Math.PI * 2);
-      context.fill();
+      const isMajor = x % majorInterval === 0 && y % majorInterval === 0;
+      if (isMajor) {
+        // Precision drafting crosshair
+        context.strokeStyle = "#D4D4D8";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(x - 3, y);
+        context.lineTo(x + 3, y);
+        context.moveTo(x, y - 3);
+        context.lineTo(x, y + 3);
+        context.stroke();
+      } else {
+        context.beginPath();
+        context.arc(x, y, 0.9, 0, Math.PI * 2);
+        context.fill();
+      }
     }
   }
+
+  // Architectural drafting perimeter tick marks
+  const margin = 20;
+  context.strokeStyle = "#E4E4E7";
+  context.lineWidth = 1;
+
+  // Corner registration brackets
+  const bracketSize = 12;
+  // Top-left
+  context.beginPath();
+  context.moveTo(margin, margin + bracketSize);
+  context.lineTo(margin, margin);
+  context.lineTo(margin + bracketSize, margin);
+  // Top-right
+  context.moveTo(w - margin - bracketSize, margin);
+  context.lineTo(w - margin, margin);
+  context.lineTo(w - margin, margin + bracketSize);
+  // Bottom-left
+  context.moveTo(margin, h - margin - bracketSize);
+  context.lineTo(margin, h - margin);
+  context.lineTo(margin + bracketSize, h - margin);
+  // Bottom-right
+  context.moveTo(w - margin - bracketSize, h - margin);
+  context.lineTo(w - margin, h - margin);
+  context.lineTo(w - margin, h - margin - bracketSize);
+  context.stroke();
+
+  // Subtle bottom-left scale watermark
+  context.fillStyle = "#A1A1AA";
+  context.font = "9px ui-monospace, 'SFMono-Regular', Menlo, monospace";
+  context.textAlign = "left";
+  context.fillText("GRID // 28PX RATIO 1:1 · MAMMOTH QUAD-BOT SYSTEM", margin + 18, h - margin - 3);
 }
 
 /**
