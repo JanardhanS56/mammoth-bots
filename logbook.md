@@ -110,3 +110,17 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
 - **Placard Verlet Spring Wobble**: Handheld boards now oscillate with angular spring damping (`targetAngle - placardAngle`), wobbling naturally as agents steer and stop.
 - **Synthesized Web Audio SFX**: Integrated zero-asset native `AudioContext` synthesizer generating gentle frequency sweeps for pokes, tosses, huddle murmurs, and chord chimes on reveal, with top-bar toggle `[sound: on/off]`.
 - **Preset Dilemma Pills**: Embedded 1-click test dilemma chips (`"Should I adopt 3 cats?"`, `"Coffee or matcha?"`, `"Is pizza breakfast?"`) above the search bar.
+
+## M16: De-AI UI Redesign, Tactile Architecture & Organic Motion Dynamics
+- **De-Pill & Tactile Geometry**:
+  - Replaced generic 100px pill buttons and fuzzy drop shadows with 4–6px architectural borders and solid 2px/4px offset drop shadows.
+  - Eliminated the pulsing neon AI glow dot (`.brand-dot`); introduced an engineering titleplate `[MB-04]` and an explicit system role descriptor.
+  - Swapped generic AI demo chip copy for genuine human dilemmas (`Open a Lisbon bakery?`, `Refactor monolith or camp?`, `Adopt 3rd rescue dog?`).
+- **Motion Asymmetry & Burstiness**:
+  - Eliminated uniform 2000ms breathing/bobbing cycles; each shape has distinct harmonic cadences (`1850ms`, `2350ms`, `1980ms`, `2600ms`) and desynchronized eye blink rhythms.
+  - Staggered speech reveal delays: winner reacts first at `480ms`, followed by runners-up at `570ms`, `600ms`, `640ms`, and `710ms`.
+  - Replaced repetitive reactions with shape-specific human dialogues (e.g., Circle: `"called it twice."` / `"wait, what?"`, Triangle: `"predictable trend."` / `"rechecking math."`, Diamond: `"bow before genius!"` / `"are you serious?"`, Squircle: `"written in stone."` / `"fair enough."`).
+- **Architectural Drafting Layout**:
+  - Grounded empty white canvas with drafting corner registration brackets, coordinate crosshairs (`+`) at 112px intervals, and subtle scale ratio watermark metadata (`GRID // 28PX RATIO 1:1`).
+- **Semantic Source & SEO**:
+  - Added descriptive meta tags, explicit title, and `<noscript>` semantic block so `View Page Source` contains real readable document text.
