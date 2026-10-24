@@ -124,3 +124,15 @@ remote-repo: https://github.com/JanardhanS56/mammoth-bots.git
   - Grounded empty white canvas with drafting corner registration brackets, coordinate crosshairs (`+`) at 112px intervals, and subtle scale ratio watermark metadata (`GRID // 28PX RATIO 1:1`).
 - **Semantic Source & SEO**:
   - Added descriptive meta tags, explicit title, and `<noscript>` semantic block so `View Page Source` contains real readable document text.
+
+## M17: API Key Safeguarding, Sliding-Window Rate Limiting & Client Resilience
+- **API Key Safeguarding & Secret Redaction**:
+  - Keys remain exclusively on server/worker middleware; verified strict zero-secret leakage into client bundle (`frontend/dist/`).
+  - Added programmatic regex redaction (`(key|token|bearer)[=:\s]+...`) in worker `errorResponse` so upstream errors never expose credentials.
+- **Robust Multi-Tier Rate Limiting**:
+  - Implemented in-memory sliding-window token bucket fallback in `worker/src/cache.ts` when Cloudflare KV is offline or running locally.
+  - Returns standard `RateLimit-Limit`, `RateLimit-Remaining`, and `Retry-After` headers on HTTP 429.
+  - Client extracts `Retry-After` to display exact cooldown seconds (`Usage limit reached (10/hr). Please wait NNs.`).
+- **Client Submission Resilience & Debounce**:
+  - Integrated 2500ms client debounce in `onUserSubmit` preventing duplicate network dispatches or accidental rapid-fire double clicks.
+  - Added 14s `AbortController` timeout safeguard ensuring bots never remain frozen in the `THINKING` state if upstream connections stall.
