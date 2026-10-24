@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Mammoth Bots</title>
+    <meta name="description" content="Mammoth Bots: Four opinionated geometric robots that debate your dilemmas and reach a collective verdict." />
+    <title>Mammoth Bots — Four Autonomous Decision Robots</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
@@ -11,13 +12,14 @@
 
     <header class="top-bar">
       <div class="brand-title">
-        <span class="brand-dot"></span>
-        <span>mammoth bots</span>
+        <span class="brand-mark">MB-04</span>
+        <span class="brand-text">mammoth bots</span>
+        <span class="brand-sub">interactive deliberation engine</span>
       </div>
       <div class="top-actions">
         <button id="sound-toggle" class="text-btn" type="button" title="Toggle audio feedback">sound: on</button>
-        <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">forget</button>
-        <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?]</button>
+        <button id="amnesia-btn" class="text-btn" type="button" title="Wipe bot memory">reset memories</button>
+        <button id="nerd-toggle" class="nerd-btn" type="button" aria-pressed="false" title="Toggle nerd mode (?)">[?] telemetry</button>
       </div>
     </header>
 
@@ -25,17 +27,17 @@
 
     <main class="input-container" id="input-container">
       <div class="dilemma-chips" id="dilemma-chips">
-        <button type="button" class="dilemma-pill" data-prompt="Should I adopt 3 cats?">Should I adopt 3 cats?</button>
-        <button type="button" class="dilemma-pill" data-prompt="Coffee or matcha?">Coffee or matcha?</button>
-        <button type="button" class="dilemma-pill" data-prompt="Is pizza a breakfast food?">Is pizza breakfast?</button>
+        <button type="button" class="dilemma-pill" data-prompt="Should I quit my job and open a bakery in Lisbon?">Open a Lisbon bakery?</button>
+        <button type="button" class="dilemma-pill" data-prompt="Refactor the entire monolith this weekend or go camping?">Refactor monolith or camp?</button>
+        <button type="button" class="dilemma-pill" data-prompt="Adopt a third senior rescue dog despite a small studio?">Adopt 3rd rescue dog?</button>
       </div>
       <form id="question-form" class="input-form">
-        <label for="question-input" class="sr-only">Ask the robots a question</label>
+        <label for="question-input" class="sr-only">Type a genuine dilemma for the robots to debate</label>
         <input
           type="text"
           id="question-input"
           class="question-input"
-          placeholder="Ask a question…"
+          placeholder="State your dilemma or choice here…"
           maxlength="100"
           autocomplete="off"
           spellcheck="false"
@@ -49,6 +51,14 @@
       </form>
       <div id="input-hint" class="input-hint" aria-live="polite"></div>
     </main>
+
+    <!-- Semantic fallback and screen-reader context for genuine document text -->
+    <noscript>
+      <section class="noscript-context">
+        <h1>Mammoth Bots: Deliberation Engine</h1>
+        <p>Four autonomous geometric robots (Circle, Triangle, Diamond, Squircle) vote with weighted probability to resolve real human questions.</p>
+      </section>
+    </noscript>
 
     <div id="toast-container" class="toast-container" aria-live="assertive"></div>
     <div id="a11y-result" class="sr-only" aria-live="polite"></div>
