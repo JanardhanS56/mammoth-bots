@@ -68,11 +68,35 @@ export function drawCrown(
 
 export function getBotSpeechCopy(bot: Bot): string {
   if (bot.chosen) {
-    return bot.streak >= 2 ? "ha." : bot.label || "yes.";
+    if (bot.streak >= 2) {
+      if (bot.shape === "circle") return "called it twice.";
+      if (bot.shape === "triangle") return "predictable trend.";
+      if (bot.shape === "diamond") return "bow before genius!";
+      return "written in stone.";
+    }
+    return bot.label || "obviously.";
   }
-  if (bot.streak <= -3) return "why do I even";
-  if (bot.streak <= -2) return "hmph.";
-  return "…";
+
+  // Runners-up human dialogue with voice and burstiness
+  if (bot.streak <= -3) {
+    if (bot.shape === "circle") return "absolute nonsense.";
+    if (bot.shape === "triangle") return "statistical anomaly.";
+    if (bot.shape === "diamond") return "a total tragedy.";
+    return "you'll see in time.";
+  }
+
+  if (bot.streak <= -2) {
+    if (bot.shape === "circle") return "rigged.";
+    if (bot.shape === "triangle") return "margin error.";
+    if (bot.shape === "diamond") return "i contest this!";
+    return "sigh. fine.";
+  }
+
+  // Low streak / initial reaction
+  if (bot.shape === "circle") return "wait, what?";
+  if (bot.shape === "triangle") return "rechecking math.";
+  if (bot.shape === "diamond") return "are you serious?";
+  return "fair enough.";
 }
 
 export function drawSpeech(
@@ -80,9 +104,13 @@ export function drawSpeech(
   bot: Bot,
   elapsed: number
 ): void {
-  if (elapsed < 600) return;
+  // Stagger reaction times naturally: winner speaks first, losers follow with human delay
+  const speechDelays = [570, 640, 710, 600];
+  const startDelay = bot.chosen ? 480 : speechDelays[bot.id];
 
-  const bubbleProgress = Math.min(1, (elapsed - 600) / 200);
+  if (elapsed < startDelay) return;
+
+  const bubbleProgress = Math.min(1, (elapsed - startDelay) / 180);
   const text = getBotSpeechCopy(bot);
   if (!text) return;
 
@@ -530,13 +558,20 @@ export function drawBot(
   reducedMotion: boolean = false,
   lookAtCamera: boolean = false
 ): void {
-  // Natural periodic eye blink cycle
-  const blinkCycle = ((t + bot.id * 1400) % 3600);
-  const isBlinking = blinkCycle < 140;
+  // Distinct organic eye blink cycle per bot (not identical 3.6s timer)
+  const blinkPeriods = [3300, 4200, 2800, 4900];
+  const blinkCycle = (t + bot.id * 1100) % blinkPeriods[bot.id];
+  const isBlinking = blinkCycle < 130;
 
-  // Gentle walking bob (suppressed when dragged)
-  const bobAmp = reducedMotion || bot.isDragged ? 0 : 2.5 + 1.5 * bot.mood;
-  const bob = reducedMotion || bot.isDragged ? 0 : Math.sin((t / 2000) * 2 * Math.PI + bot.seed) * bobAmp;
+  // Asymmetric shape-specific breathing and walking bob cadences
+  const bobPeriods = [1850, 2350, 1980, 2600];
+  const bobMultipliers = [1.1, 0.9, 1.05, 0.85];
+  const basePeriod = bobPeriods[bot.id];
+  const bobAmp = reducedMotion || bot.isDragged ? 0 : (2.4 + 1.4 * bot.mood) * bobMultipliers[bot.id];
+  const microHarmonic = reducedMotion ? 0 : Math.sin((t / (basePeriod * 0.5)) + bot.seed) * 0.35;
+  const bob = reducedMotion || bot.isDragged
+    ? 0
+    : Math.sin((t / basePeriod) * 2 * Math.PI + bot.seed) * bobAmp + microHarmonic;
 
   // Jump animation on click/hop or lift on drag
   const hop = (bot.hopOffset || 0) + (bot.isDragged ? -16 : 0);
